@@ -1,3 +1,18 @@
 spring:
-  application:
-    name: s3m-formation
+  datasource:
+    url: jdbc:postgresql://localhost:5432/s3m_db_formation
+    username: s3m_user
+    password: s3m_password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8080
