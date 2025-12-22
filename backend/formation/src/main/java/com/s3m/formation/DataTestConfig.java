@@ -7,12 +7,12 @@ import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class DataTestConfig {
-    @Bean
-    CommandLineRunner testFormation(FormationRepository repository) {
-        return args -> {
-            repository.findAll().forEach(f ->
-                    System.out.println(f.getReferenceFormation() + " - " + f.getModule())
-            );
-        };
-    }
+//    @Bean
+//    CommandLineRunner testFormation(FormationRepository repository) {
+//        return args -> {
+//            repository.findAll().forEach(f ->
+//                    System.out.println(f.getReferenceFormation() + " - " + f.getModule())
+//            );
+//        };
+//    }
 }

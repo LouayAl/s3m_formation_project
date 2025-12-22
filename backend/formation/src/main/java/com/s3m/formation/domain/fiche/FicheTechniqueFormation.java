@@ -5,6 +5,7 @@ import com.s3m.formation.domain.formation.Formation;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -83,8 +84,11 @@ public class FicheTechniqueFormation {
        PEDAGOGICAL PARAMETERS
        ========================= */
 
-    @Column(name = "duree_min_jours")
-    private Double dureeJours;
+    @Column(name = "duree_jours")
+    private BigDecimal dureeJours;
+
+    @Column(name = "duree_heures")
+    private BigDecimal dureeHeures;
 
     @Column(name = "nb_participants_min")
     private Integer nbParticipantsMin;

@@ -15,7 +15,5 @@ public interface FicheTechniqueFormationRepository
             String statut
     );
 
-    List<FicheTechniqueFormation>
-    findByFormation_IdFormationOrderByVersionNumeroDesc(Integer idFormation);
 
 }
