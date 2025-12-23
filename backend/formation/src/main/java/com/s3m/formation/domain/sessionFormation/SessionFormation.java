@@ -3,6 +3,7 @@ package com.s3m.formation.domain.sessionFormation;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.formateur.Formateur;
 import com.s3m.formation.domain.formation.Formation;
+import com.s3m.formation.domain.reservation.DemandeReservation;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.NoArgsConstructor;
@@ -42,4 +43,12 @@ public class SessionFormation {
 
     @Column(name = "statut")
     private String statut;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_demande",
+            nullable = false,
+            unique = true
+    )
+    private DemandeReservation demande;
 }

@@ -16,3 +16,7 @@ spring:
 
 server:
   port: 8080
+
+security:
+  jwt:
+    secret: "S3M_SUPER_SECRET_JWT_KEY_2025_!@#_LONG_AND_RANDOM_123456"

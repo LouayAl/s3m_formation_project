@@ -3,6 +3,7 @@ package com.s3m.formation.domain.reservation;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.fiche.FicheTechniqueFormation;
 import com.s3m.formation.domain.formation.Formation;
+import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -48,8 +49,9 @@ public class DemandeReservation {
     @Column(name = "date_fin_souhaitee")
     private LocalDate dateFinSouhaitee;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
-    private String statut; // REQUESTED, VALIDATED, REJECTED, ...
+    private DemandeReservationStatut  statut; // EN_ATTENTE, VALIDEE, REFUSEE, ANNULEE
 
     @Column(name = "commentaire_client")
     private String commentaireClient;
@@ -59,4 +61,8 @@ public class DemandeReservation {
 
     @Column(name = "date_creation", nullable = false)
     private LocalDateTime dateCreation;
+
+    @OneToOne(mappedBy = "demande", fetch = FetchType.LAZY)
+    private SessionFormation sessionFormation;
+
 }

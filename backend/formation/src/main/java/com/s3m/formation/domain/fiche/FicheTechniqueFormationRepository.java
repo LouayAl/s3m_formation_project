@@ -15,5 +15,9 @@ public interface FicheTechniqueFormationRepository
             String statut
     );
 
-
+    Optional<FicheTechniqueFormation>
+    findFirstByFormationIdFormationAndStatutOrderByVersionNumeroDesc(
+            Integer idFormation,
+            String statut
+    );
 }

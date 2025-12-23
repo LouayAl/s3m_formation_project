@@ -8,5 +8,5 @@ public interface DemandeReservationRepository
 
     List<DemandeReservation> findByEntreprise_IdEntreprise(Integer idEntreprise);
 
-    List<DemandeReservation> findByStatut(String statut);
+    List<DemandeReservation> findByStatut(DemandeReservationStatut  statut);
 }
