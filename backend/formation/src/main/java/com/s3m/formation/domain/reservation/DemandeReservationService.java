@@ -3,6 +3,7 @@ package com.s3m.formation.domain.reservation;
 import com.s3m.formation.api.dto.DemandeReservationResponse;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
+import com.s3m.formation.domain.fiche.FicheStatut;
 import com.s3m.formation.domain.fiche.FicheTechniqueFormation;
 import com.s3m.formation.domain.fiche.FicheTechniqueFormationRepository;
 import com.s3m.formation.domain.formation.Formation;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -46,9 +46,9 @@ public class DemandeReservationService {
 
         // 4️⃣ Auto-select ACTIVE fiche technique (latest version)
         FicheTechniqueFormation fiche = ficheRepository
-                .findFirstByFormationIdFormationAndStatutOrderByVersionNumeroDesc(
+                .findFirstByFormation_IdFormationAndStatutOrderByVersionNumeroDesc(
                         formation.getIdFormation(),
-                        "ACTIVE"
+                        FicheStatut.ACTIVE
                 )
                 .orElseThrow(() ->
                         new IllegalStateException(
@@ -65,8 +65,6 @@ public class DemandeReservationService {
                 .dateDebutSouhaitee(request.getDateDebutSouhaitee())
                 .dateFinSouhaitee(request.getDateFinSouhaitee())
                 .commentaireClient(request.getCommentaireClient())
-                .statut(DemandeReservationStatut.EN_ATTENTE)
-                .dateCreation(LocalDateTime.now())
                 .build();
 
         // 6️⃣ Persist

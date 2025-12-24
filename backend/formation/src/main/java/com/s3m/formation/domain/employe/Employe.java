@@ -15,11 +15,15 @@ import lombok.*;
 public class Employe {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_employe")
     private Integer idEmploye;
 
     private String nom;
     private String prenom;
-    private String email;
     private String telephone;
+
+    @Column(unique = true)
+    private String email;
+
 }

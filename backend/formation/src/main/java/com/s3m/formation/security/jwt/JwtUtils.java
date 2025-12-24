@@ -19,76 +19,29 @@ public class JwtUtils {
     @Value("${security.jwt.secret}")
     private String jwtSecret;
 
-    private Key getSigningKey() {
+    @Value("${security.jwt.expiration:86400000}")
+    private long expirationMs;
+
+    private Key signingKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
     }
 
-    /* =========================
-       CORE
-       ========================= */
-
-    public Claims extractClaims(String token) {
+    public Claims parseClaims(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
+                .setSigningKey(signingKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    public boolean validateToken(String token) {
-        try {
-            extractClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
-    }
-
-    /* =========================
-       CLAIM HELPERS
-       ========================= */
-
-    public Integer extractEntrepriseId(String token) {
-        return extractClaims(token).get("entrepriseId", Integer.class);
-    }
-
-    public String extractRole(String token) {
-        return extractClaims(token).get("role", String.class);
-    }
-
-    public String extractEmail(String token) {
-        return extractClaims(token).getSubject(); // standard JWT usage
-    }
-
-    public Integer getEntrepriseId(String token) {
-        return extractClaims(token).get("entrepriseId", Integer.class);
-    }
-
-    public String getRole(String token) {
-        return extractClaims(token).get("role", String.class);
-    }
-
-    public String getEmail(String token) {
-        return extractClaims(token).get("email", String.class);
-    }
-
-
-    public String generateToken(
-            String email,
-            Integer entrepriseId,
-            String role
-    ) {
+    public String generateToken(String email, Integer entrepriseId, String role) {
         return Jwts.builder()
                 .setSubject(email)
-                .addClaims(Map.of(
-                        "entrepriseId", entrepriseId,
-                        "role", role,
-                        "email", email
-                ))
+                .claim("entrepriseId", entrepriseId)
+                .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000)) // 24h
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(signingKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
-
 }

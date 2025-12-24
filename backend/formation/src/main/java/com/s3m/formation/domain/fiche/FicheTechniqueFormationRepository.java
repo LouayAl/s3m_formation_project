@@ -12,12 +12,13 @@ public interface FicheTechniqueFormationRepository
 
     Optional<FicheTechniqueFormation> findByFormation_IdFormationAndStatut(
             Integer idFormation,
-            String statut
+            FicheStatut statut
     );
 
     Optional<FicheTechniqueFormation>
-    findFirstByFormationIdFormationAndStatutOrderByVersionNumeroDesc(
+    findFirstByFormation_IdFormationAndStatutOrderByVersionNumeroDesc(
             Integer idFormation,
-            String statut
+            FicheStatut statut
     );
 }
+

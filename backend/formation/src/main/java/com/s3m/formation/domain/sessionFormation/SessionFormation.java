@@ -41,8 +41,16 @@ public class SessionFormation {
     @Column(name = "date_fin")
     private LocalDate dateFin;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut")
-    private String statut;
+    private SessionFormationStatut statut;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.statut == null) {
+            this.statut = SessionFormationStatut.PLANIFIEE;
+        }
+    }
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(

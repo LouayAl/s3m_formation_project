@@ -22,7 +22,7 @@ public class FicheTechniqueFormationService {
 
     public FicheTechniqueResponseDto getActiveByFormation(Integer formationId) {
         return repository
-                .findByFormation_IdFormationAndStatut(formationId, "ACTIVE")
+                .findByFormation_IdFormationAndStatut(formationId, FicheStatut.ACTIVE)
                 .map(this::toDto)
                 .orElse(null); // later → throw exception
     }

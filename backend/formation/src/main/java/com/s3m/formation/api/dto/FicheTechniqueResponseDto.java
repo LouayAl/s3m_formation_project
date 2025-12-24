@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 public record FicheTechniqueResponseDto(
         Integer idFiche,
         Integer versionNumero,
-        String statut,
+        com.s3m.formation.domain.fiche.FicheStatut statut,
         LocalDateTime dateCreation,
         LocalDate dateActivation,
         String description,

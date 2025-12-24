@@ -1,5 +1,6 @@
 package com.s3m.formation.domain.reservation.admin;
 
+import com.s3m.formation.api.dto.DemandeReservationAdminDto;
 import com.s3m.formation.api.dto.PlanifierDemandeRequest;
 import com.s3m.formation.domain.reservation.DemandeReservation;
 import com.s3m.formation.domain.reservation.DemandeReservationStatut;
@@ -49,7 +50,7 @@ public class DemandeReservationAdminController {
         return ResponseEntity.noContent().build();
     }
     @GetMapping
-    public List<DemandeReservation> getAll(
+    public List<DemandeReservationAdminDto> getAll(
             @RequestParam(required = false) DemandeReservationStatut statut
     ) {
         if (statut != null) {
@@ -59,7 +60,7 @@ public class DemandeReservationAdminController {
     }
 
     @GetMapping("/{id}")
-    public DemandeReservation getOne(@PathVariable Integer id) {
+    public DemandeReservationAdminDto getOne(@PathVariable Integer id) {
         return queryService.findOne(id);
     }
 }

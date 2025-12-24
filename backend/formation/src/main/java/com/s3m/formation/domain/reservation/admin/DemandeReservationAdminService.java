@@ -6,6 +6,7 @@ import com.s3m.formation.domain.reservation.DemandeReservationRepository;
 import com.s3m.formation.domain.reservation.DemandeReservationStatut;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,35 +69,51 @@ public class DemandeReservationAdminService {
        PLANIFIER (CREATE SESSION)
        ========================= */
 
+    @Transactional
     public void planifier(Integer demandeId, PlanifierDemandeRequest request) {
 
         DemandeReservation demande = load(demandeId);
 
+        // 1️⃣ Status validation
         if (demande.getStatut() != DemandeReservationStatut.VALIDEE) {
             throw new IllegalStateException(
                     "Only VALIDEE reservations can be planned"
             );
         }
 
-        // Optional safety check (avoid double session)
+        // 2️⃣ Avoid double planning (1 demande = 1 session)
         if (sessionRepository.existsByDemande(demande)) {
             throw new IllegalStateException(
                     "This demande already has a session"
             );
         }
 
+        // 3️⃣ Validate planning dates
+        if (request.getDateDebut() == null || request.getDateFin() == null) {
+            throw new IllegalArgumentException("Session dates are required");
+        }
+
+        if (request.getDateDebut().isAfter(request.getDateFin())) {
+            throw new IllegalArgumentException(
+                    "dateDebut must be before or equal to dateFin"
+            );
+        }
+
+        // 4️⃣ Create session (Session is the aggregate owner)
         SessionFormation session = SessionFormation.builder()
                 .demande(demande)
                 .formation(demande.getFormation())
                 .dateDebut(request.getDateDebut())
                 .dateFin(request.getDateFin())
-                .statut("PLANIFIEE")
+                .statut(SessionFormationStatut.PLANIFIEE)
                 .build();
 
         sessionRepository.save(session);
 
+        // 5️⃣ Optional admin comment
         demande.setCommentaireAdmin(request.getCommentaireAdmin());
     }
+
 
     /* =========================
        HELPERS

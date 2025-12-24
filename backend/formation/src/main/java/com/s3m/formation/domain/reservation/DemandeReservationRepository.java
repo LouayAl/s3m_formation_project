@@ -9,4 +9,10 @@ public interface DemandeReservationRepository
     List<DemandeReservation> findByEntreprise_IdEntreprise(Integer idEntreprise);
 
     List<DemandeReservation> findByStatut(DemandeReservationStatut  statut);
+    List<DemandeReservation> findAllByOrderByDateCreationDesc();
+
+    List<DemandeReservation> findByStatutOrderByDateCreationDesc(
+            DemandeReservationStatut statut
+    );
+
 }

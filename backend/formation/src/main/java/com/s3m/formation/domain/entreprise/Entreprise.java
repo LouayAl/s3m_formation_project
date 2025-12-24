@@ -21,6 +21,6 @@ public class Entreprise {
     @Column(name = "nom_entreprise")
     private String nomEntreprise;
 
-    @OneToMany(mappedBy = "entreprise")
+    @OneToMany(mappedBy = "entreprise", fetch = FetchType.LAZY)
     private List<Formateur> formateurs;
 }

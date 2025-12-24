@@ -57,11 +57,6 @@ public class FormationService {
                 .toList();
     }
 
-
-
-
-
-
     /* =========================
        MAPPING (temporary)
        ========================= */

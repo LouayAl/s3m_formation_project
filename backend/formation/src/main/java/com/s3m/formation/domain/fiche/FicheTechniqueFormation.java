@@ -46,8 +46,9 @@ public class FicheTechniqueFormation {
     @Column(name = "version_numero", nullable = false)
     private Integer versionNumero;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
-    private String statut; // ACTIVE / ARCHIVED / DRAFT
+    private FicheStatut statut; // ACTIVE / ARCHIVED / DRAFT
 
     @Column(name = "date_creation", nullable = false)
     private LocalDateTime dateCreation;

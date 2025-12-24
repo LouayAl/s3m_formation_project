@@ -30,5 +30,4 @@ public class ParticipationController {
     ) {
         return service.countParticipants(sessionId);
     }
-
 }

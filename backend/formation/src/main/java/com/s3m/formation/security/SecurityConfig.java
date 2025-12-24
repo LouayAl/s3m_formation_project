@@ -3,6 +3,7 @@ package com.s3m.formation.security;
 import com.s3m.formation.security.jwt.JwtUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -43,7 +44,10 @@ public class SecurityConfig {
                         ).permitAll()
 
                         // Secured business endpoints
-                        .requestMatchers("/api/demandes-reservation/**")
+                        .requestMatchers(HttpMethod.POST, "/api/demandes-reservation")
+                        .hasRole("CLIENT")
+
+                        .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
 
                         .anyRequest().authenticated()

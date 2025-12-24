@@ -12,7 +12,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Formateur {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_formateur")
     private Integer idFormateur;
 

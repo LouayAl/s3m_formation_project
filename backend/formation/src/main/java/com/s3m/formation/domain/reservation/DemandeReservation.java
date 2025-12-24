@@ -52,6 +52,13 @@ public class DemandeReservation {
     @Enumerated(EnumType.STRING)
     @Column(name = "statut", nullable = false)
     private DemandeReservationStatut  statut; // EN_ATTENTE, VALIDEE, REFUSEE, ANNULEE
+    @PrePersist
+    public void prePersist() {
+        this.dateCreation = LocalDateTime.now();
+        if (this.statut == null) {
+            this.statut = DemandeReservationStatut.EN_ATTENTE;
+        }
+    }
 
     @Column(name = "commentaire_client")
     private String commentaireClient;
