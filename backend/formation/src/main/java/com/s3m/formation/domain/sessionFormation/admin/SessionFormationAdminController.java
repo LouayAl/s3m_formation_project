@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.sessionFormation.admin;
 
 
+import com.s3m.formation.domain.sessionFormation.SessionFormationService;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import com.s3m.formation.domain.sessionFormation.admin.dto.SessionFormationAdminListDto;
 import com.s3m.formation.domain.sessionFormation.admin.dto.SessionFormationAdminUpdateRequest;
@@ -20,7 +21,9 @@ import java.util.List;
 public class SessionFormationAdminController {
 
     private final SessionFormationAdminQueryService queryService;
-    private final SessionFormationAdminService service;
+    private final SessionFormationAdminService serviceAdmin;
+    private final SessionFormationService service;
+
 
     @GetMapping
     public List<SessionFormationAdminListDto> search(
@@ -45,7 +48,25 @@ public class SessionFormationAdminController {
             @PathVariable Integer id,
             @RequestBody SessionFormationAdminUpdateRequest request
     ) {
-        service.updateSession(id, request);
+        serviceAdmin.updateSession(id, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{sessionId}/demarrer")
+    public ResponseEntity<Void> demarrer(@PathVariable Integer sessionId) {
+        service.demarrerSession(sessionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{sessionId}/terminer")
+    public ResponseEntity<Void> terminer(@PathVariable Integer sessionId) {
+        service.terminerSession(sessionId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{sessionId}/annuler")
+    public ResponseEntity<Void> annuler(@PathVariable Integer sessionId) {
+        service.annulerSession(sessionId);
         return ResponseEntity.noContent().build();
     }
 }

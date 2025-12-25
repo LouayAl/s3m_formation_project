@@ -1,5 +1,6 @@
 package com.s3m.formation.domain.sessionFormation;
 
+import com.s3m.formation.api.exception.SessionFormationException;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.formateur.Formateur;
 import com.s3m.formation.domain.formation.Formation;
@@ -59,4 +60,52 @@ public class SessionFormation {
             unique = true
     )
     private DemandeReservation demande;
+
+    public void demarrer(LocalDate today) {
+
+        if (this.statut != SessionFormationStatut.PLANIFIEE) {
+            throw new SessionFormationException(
+                    "La session doit être PLANIFIEE pour démarrer"
+            );
+        }
+
+        if (this.formateur == null) {
+            throw new SessionFormationException(
+                    "Un formateur doit être assigné avant le démarrage"
+            );
+        }
+
+        if (this.fournisseur == null) {
+            throw new SessionFormationException(
+                    "Un fournisseur doit être assigné avant le démarrage"
+            );
+        }
+
+        if (this.dateDebut.isAfter(today)) {
+            throw new SessionFormationException(
+                    "La session ne peut pas démarrer dans le futur"
+            );
+        }
+
+        this.statut = SessionFormationStatut.EN_COURS;
+    }
+
+    public void terminer() {
+        if (this.statut != SessionFormationStatut.EN_COURS) {
+            throw new IllegalStateException(
+                    "La session doit être EN_COURS pour être terminée"
+            );
+        }
+        this.statut = SessionFormationStatut.TERMINEE;
+    }
+
+    public void annuler() {
+        if (this.statut == SessionFormationStatut.TERMINEE) {
+            throw new IllegalStateException(
+                    "Une session terminée ne peut pas être annulée"
+            );
+        }
+        this.statut = SessionFormationStatut.ANNULEE;
+    }
+
 }
