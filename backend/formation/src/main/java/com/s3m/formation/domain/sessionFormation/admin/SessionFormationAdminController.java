@@ -1,10 +1,12 @@
 package com.s3m.formation.domain.sessionFormation.admin;
 
 
+import com.s3m.formation.api.dto.SessionFormationAuditDto;
 import com.s3m.formation.domain.sessionFormation.SessionFormationService;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import com.s3m.formation.domain.sessionFormation.admin.dto.SessionFormationAdminListDto;
 import com.s3m.formation.domain.sessionFormation.admin.dto.SessionFormationAdminUpdateRequest;
+import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,7 @@ public class SessionFormationAdminController {
     private final SessionFormationAdminQueryService queryService;
     private final SessionFormationAdminService serviceAdmin;
     private final SessionFormationService service;
+    private final SessionFormationAuditService auditService;
 
 
     @GetMapping
@@ -68,5 +71,12 @@ public class SessionFormationAdminController {
     public ResponseEntity<Void> annuler(@PathVariable Integer sessionId) {
         service.annulerSession(sessionId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{sessionId}/audit")
+    public List<SessionFormationAuditDto> audit(
+            @PathVariable Integer sessionId
+    ) {
+        return auditService.getAuditBySession(sessionId);
     }
 }

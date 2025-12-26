@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "session_formation_audit")
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
