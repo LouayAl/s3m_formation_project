@@ -34,4 +34,24 @@ public interface SessionFormationRepository
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
+
+    @Query("SELECT MIN(s.formation.annee) FROM SessionFormation s WHERE s.entreprise.idEntreprise = :clientId")
+    Integer findPremiereAnnee(@Param("clientId") Integer clientId);
+
+    @Query("SELECT MAX(s.formation.annee) FROM SessionFormation s WHERE s.entreprise.idEntreprise = :clientId")
+    Integer findDerniereAnnee(@Param("clientId") Integer clientId);
+
+    @Query("SELECT MIN(s.dateDebut) FROM SessionFormation s WHERE s.entreprise.idEntreprise = :clientId")
+    LocalDate findDatePremiereFormation(@Param("clientId") Integer clientId);
+
+    @Query("SELECT MAX(s.dateFin) FROM SessionFormation s WHERE s.entreprise.idEntreprise = :clientId")
+    LocalDate findDateDerniereFormation(@Param("clientId") Integer clientId);
+
+    @Query("SELECT s.entreprise.nomEntreprise FROM SessionFormation s WHERE s.entreprise.idEntreprise = :clientId")
+    String findNomClient(@Param("clientId") Integer clientId);
+
+    List<SessionFormation> findByEntreprise_IdEntreprise(Integer idEntreprise);
+
+
+
 }

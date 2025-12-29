@@ -9,6 +9,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Entity
@@ -45,6 +46,13 @@ public class SessionFormation {
     @Enumerated(EnumType.STRING)
     @Column(name = "statut")
     private SessionFormationStatut statut;
+
+    @Column(name = "d_jours")
+    private BigDecimal dJours;
+
+    @Column(name = "d_heures")
+    private BigDecimal dHeures;
+
 
     @PrePersist
     public void prePersist() {
