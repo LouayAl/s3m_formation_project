@@ -25,7 +25,11 @@ public class EvaluationAFroid {
     private Participation participation;
 
     private String evaluationParticipant;
+
+    @Column(name = "evaluation_n_plus_1")
     private String evaluationNPlus1;
+
+    @Column(name = "date_evaluation_a_froid")
     private LocalDate dateEvaluationAFroid;
     private BigDecimal tauxEfficacite;
 }

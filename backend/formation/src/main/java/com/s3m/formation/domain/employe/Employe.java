@@ -30,7 +30,7 @@ public class Employe {
     private String csp;
     private String fonction;
     private String typeContrat;
-    private String f_h; // gender
+    private Character f_h; // gender
     private LocalDate dateEmbauche;
     private LocalDate dateNaissance;
 

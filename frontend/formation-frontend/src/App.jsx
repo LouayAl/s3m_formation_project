@@ -1,17 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import AdminSessionsPage from "./pages/AdminSessionsPage";
 import AdminSessionDetailsPage from "./pages/admin/AdminSessionDetailsPage";
+import LandingPage from "./pages/dashboard/LandingPage";
 
 /* ---------- Pages ---------- */
 
 function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogin = () => {
+    login(); // your login function
+    navigate("/dashboard"); // redirect to landing page after login
+  };
 
   return (
     <div style={{ padding: 40 }}>
       <h2>Admin Login</h2>
-      <button onClick={login}>Login as Admin</button>
+      <button onClick={handleLogin}>Login as Admin</button>
     </div>
   );
 }
@@ -33,7 +40,17 @@ function App() {
           {/* Auth */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Admin */}
+          {/* Dashboard / Landing */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <LandingPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Sessions */}
           <Route
             path="/admin/sessions"
             element={
@@ -52,8 +69,8 @@ function App() {
             }
           />
 
-          {/* Default */}
-          <Route path="*" element={<Navigate to="/admin/sessions" replace />} />
+          {/* Default redirect to dashboard */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
