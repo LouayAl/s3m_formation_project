@@ -1,46 +1,28 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+
+import LoginPage from "./pages/auth/LoginPage";
+import LandingPage from "./pages/dashboard/LandingPage";
 import AdminSessionsPage from "./pages/AdminSessionsPage";
 import AdminSessionDetailsPage from "./pages/admin/AdminSessionDetailsPage";
-import LandingPage from "./pages/dashboard/LandingPage";
-
-/* ---------- Pages ---------- */
-
-function LoginPage() {
-  const { login } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogin = () => {
-    login(); // your login function
-    navigate("/dashboard"); // redirect to landing page after login
-  };
-
-  return (
-    <div style={{ padding: 40 }}>
-      <h2>Admin Login</h2>
-      <button onClick={handleLogin}>Login as Admin</button>
-    </div>
-  );
-}
 
 /* ---------- Route Guard ---------- */
-
 function ProtectedRoute({ children }) {
   const { token } = useAuth();
   return token ? children : <Navigate to="/login" replace />;
 }
 
 /* ---------- App ---------- */
-
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Auth */}
+
+          {/* ---------- AUTH ---------- */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* Dashboard / Landing */}
+          {/* ---------- DASHBOARD ---------- */}
           <Route
             path="/dashboard"
             element={
@@ -50,7 +32,7 @@ function App() {
             }
           />
 
-          {/* Admin Sessions */}
+          {/* ---------- ADMIN ---------- */}
           <Route
             path="/admin/sessions"
             element={
@@ -69,8 +51,9 @@ function App() {
             }
           />
 
-          {/* Default redirect to dashboard */}
+          {/* ---------- DEFAULT ---------- */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>

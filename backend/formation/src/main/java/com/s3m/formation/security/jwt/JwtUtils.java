@@ -44,4 +44,14 @@ public class JwtUtils {
                 .signWith(signingKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+    public String generateTokenFromEmail(String email) {
+        return Jwts.builder()
+                .setSubject(email)
+                // Optionally, add default claims if you want
+                //.claim("role", "ADMIN") // or fetch role dynamically
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(signingKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
 }
