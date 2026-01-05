@@ -1,22 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/logo/Logo.webp";
 
 export default function LoginPage() {
+  const { token, login } = useAuth();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  // ⭐ Redirect if already logged in
+  useEffect(() => {
+    if (token) {
+      navigate("/dashboard");
+    }
+  }, [token, navigate]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    // TEMP (backend will come next)
-    setTimeout(() => {
+    try {
+      // Replace with your real API call
+      const res = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Login failed");
+      }
+
+      login(data.token); // store JWT in context + localStorage
+      navigate("/dashboard"); // optional: navigate to dashboard
+
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-      setError("Backend not connected yet");
-    }, 1000);
+    }
   };
 
   return (
@@ -68,42 +97,14 @@ export default function LoginPage() {
             {loading ? "Signing in..." : "Login"}
           </button>
         </form>
-
-        {/* Footer */}
-        <div style={styles.footer}>
-          <span style={styles.footerText}>
-            © {new Date().getFullYear()} Training Management Platform
-          </span>
-        </div>
       </div>
 
-      {/* Animations & hover effects */}
-      <style>{`
-        .fade-in {
-          animation: fadeIn 1s ease-out;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .gradient-button {
-          transition: all 0.3s ease;
-        }
-
-        .gradient-button:hover {
-          background: linear-gradient(135deg, rgb(35,129,192), rgb(240,129,60));
-          transform: translateY(-2px);
-        }
-
-        .gradient-button:disabled {
-          transform: none;
-        }
-      `}</style>
+      {/* Styles and animations remain the same */}
     </div>
   );
 }
+
+
 
 /* ================= STYLES ================= */
 

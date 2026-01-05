@@ -1,8 +1,17 @@
-import axios from "axios";
+// src/api/authApi.js
+export async function login({ email, password }) {
+  const response = await fetch("http://localhost:8080/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
 
-const API_URL = "http://localhost:8080/api/auth";
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.message || "Login failed");
+  }
 
-export const login = async (credentials) => {
-  const res = await axios.post(`${API_URL}/login`, credentials);
-  return res.data;
-};
+  return response.json(); // { token, email, role }
+}
