@@ -4,3 +4,4 @@ db/.env
 
 # Docker volumes (safety)
 pgdata/
+node_modules

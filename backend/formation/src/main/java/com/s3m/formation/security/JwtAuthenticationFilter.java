@@ -44,8 +44,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             String email = claims.getSubject();
             String role = claims.get("role", String.class);
-            Integer entrepriseId = claims.get("entrepriseId", Integer.class);
-
+            Integer entrepriseId = claims.containsKey("entrepriseId")
+                    ? claims.get("entrepriseId", Integer.class)
+                    : null;
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority("ROLE_" + role);
 

@@ -1,5 +1,6 @@
 package com.s3m.formation.security.jwt;
 
+import com.s3m.formation.auth.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.JwtException;
@@ -34,16 +35,18 @@ public class JwtUtils {
                 .getBody();
     }
 
-    public String generateToken(String email, Integer entrepriseId, String role) {
+    public String generateToken(User user) {
         return Jwts.builder()
-                .setSubject(email)
-                .claim("entrepriseId", entrepriseId)
-                .claim("role", role)
+                .setSubject(user.getEmail())
+                .claim("role", user.getRole())
+                .claim("entrepriseId", user.getEntreprise().getIdEntreprise())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
+
     public String generateTokenFromEmail(String email) {
         return Jwts.builder()
                 .setSubject(email)

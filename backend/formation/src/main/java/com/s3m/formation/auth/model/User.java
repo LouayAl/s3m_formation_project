@@ -1,5 +1,6 @@
 package com.s3m.formation.auth.model;
 
+import com.s3m.formation.domain.entreprise.Entreprise;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,6 +26,15 @@ public class User {
     @Column(nullable = false)
     private String role;
 
+    // 🔗 MANY USERS → ONE ENTREPRISE
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_entreprise",          // FK column in users table
+            referencedColumnName = "id_entreprise",
+            nullable = false
+    )
+    private Entreprise entreprise;
+
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -39,5 +49,5 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    // getters and setters
+
 }
