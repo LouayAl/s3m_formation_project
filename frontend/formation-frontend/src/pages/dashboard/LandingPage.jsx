@@ -1,3 +1,4 @@
+// src/pages/dashboard/LandingPage.jsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { getClientKpis } from "../../api/kpiApi";
@@ -13,17 +14,26 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token && user?.entrepriseId) {
-      getClientKpis(user.entrepriseId, token)
-        .then(setKpis)
-        .catch(err => console.error("Failed to fetch KPIs:", err))
-        .finally(() => setLoading(false));
-    } else setLoading(false);
+    if (!user?.entrepriseId) return setLoading(false);
+
+
+    const fetchKpis = async () => {
+      try {
+        const data = await getClientKpis(user.entrepriseId, token);
+        setKpis(data);
+      } catch (err) {
+        console.error("Failed to fetch KPIs:", err);
+        setKpis(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchKpis();
   }, [token, user]);
 
   if (loading) return <div>Loading KPIs...</div>;
-  if (!kpis) return <div>No KPIs found.</div>;
-
+  if (!kpis) return <div>No KPIs found or unauthorized.</div>;
   const { volume, financier, formations, population, efficacite } = kpis;
 
   return (
