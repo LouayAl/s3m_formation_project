@@ -1,4 +1,4 @@
-// src/context/AuthContext.jsx
+// formation-frontend/src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 import jwt_decode from "jwt-decode"; // ✅ proper import for Vite
 
