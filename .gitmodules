@@ -1,0 +1,4 @@
+[submodule "frontend/formation-frontend/frontend-template"]
+	path = frontend/formation-frontend/frontend-template
+	url = https://github.com/LouayAl/s3m-frontend-template.git
+	branch = feature/frontend-auth-integration
