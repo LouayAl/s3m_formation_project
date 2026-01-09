@@ -26,6 +26,12 @@ public class User {
     @Column(nullable = false)
     private String role;
 
+    @Column(nullable = false)
+    private String prenom;
+
+    @Column(nullable = false)
+    private String nom;
+
     // 🔗 MANY USERS → ONE ENTREPRISE
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(

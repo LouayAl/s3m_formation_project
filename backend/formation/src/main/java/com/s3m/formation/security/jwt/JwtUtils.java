@@ -40,6 +40,8 @@ public class JwtUtils {
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole())
                 .claim("entrepriseId", user.getEntreprise().getIdEntreprise())
+                .claim("prenom", user.getPrenom())
+                .claim("nom", user.getNom())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey(), SignatureAlgorithm.HS256)
