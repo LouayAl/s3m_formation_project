@@ -31,7 +31,7 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtUtils);
     }
 
-    // ⭐⭐⭐ ADD THIS METHOD HERE ⭐⭐⭐
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 

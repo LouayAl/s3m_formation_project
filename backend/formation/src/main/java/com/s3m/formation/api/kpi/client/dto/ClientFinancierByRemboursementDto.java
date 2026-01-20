@@ -1,4 +1,9 @@
 package com.s3m.formation.api.kpi.client.dto;
 
-public record ClientFinancierByRemboursementDto() {
+import java.math.BigDecimal;
+
+public record ClientFinancierByRemboursementDto(
+        String typeRemboursement,
+        BigDecimal totalHeures
+) {
 }

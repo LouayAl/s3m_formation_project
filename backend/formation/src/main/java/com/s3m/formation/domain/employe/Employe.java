@@ -1,5 +1,6 @@
 package com.s3m.formation.domain.employe;
 
+import com.s3m.formation.domain.departement.Departement;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,6 +31,11 @@ public class Employe {
     private String csp;
     private String fonction;
     private String typeContrat;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_departement")
+    private Departement departement;
+
     private Character f_h; // gender
     private LocalDate dateEmbauche;
     private LocalDate dateNaissance;

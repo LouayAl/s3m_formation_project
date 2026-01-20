@@ -1,10 +1,13 @@
 package com.s3m.formation.api.kpi.client.repository;
 
+import com.s3m.formation.api.kpi.client.projection.ClientFinancierByRemboursementProjection;
 import com.s3m.formation.api.kpi.client.projection.ClientFinancierKpiProjection;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
+import java.util.List;
 
 public interface ClientFinancierKpiRepository extends JpaRepository<SessionFormation, Integer> {
 
@@ -21,4 +24,16 @@ public interface ClientFinancierKpiRepository extends JpaRepository<SessionForma
         WHERE s.fournisseur.idEntreprise = :clientId
     """)
     ClientFinancierKpiProjection computeFinancier(@Param("clientId") Integer clientId);
+
+    @Query("""
+        SELECT
+            COALESCE(c.remboursement, 'Non défini') AS remboursement,
+            COALESCE(SUM(s.dHeures), 0) AS totalHeures
+        FROM SessionFormation s
+        LEFT JOIN CoutFormation c ON c.session.idSession = s.idSession
+        GROUP BY c.remboursement
+        ORDER BY c.remboursement
+    """)
+    List<ClientFinancierByRemboursementProjection> computeFinancierByRemboursement();
+
 }

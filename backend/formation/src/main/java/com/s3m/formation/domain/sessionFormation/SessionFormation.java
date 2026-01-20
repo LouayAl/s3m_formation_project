@@ -4,6 +4,7 @@ import com.s3m.formation.api.exception.SessionFormationException;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.formateur.Formateur;
 import com.s3m.formation.domain.formation.Formation;
+import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.reservation.DemandeReservation;
 import jakarta.persistence.*;
 import lombok.*;
@@ -11,6 +12,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Entity
 @Table(name = "session_formation")
@@ -34,8 +36,15 @@ public class SessionFormation {
     private Formateur formateur;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_fournisseur")
     private Entreprise fournisseur;
+
+    @OneToMany(mappedBy = "session")
+    private List<Participation> participations;
 
     @Column(name = "date_debut")
     private LocalDate dateDebut;

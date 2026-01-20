@@ -15,34 +15,33 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class ClientKpiServiceImpl implements ClientKpiService {
 
-    private final ClientVolumeKpiRepository volumeRepo;
     private final ClientFinancierKpiRepository financierRepo;
-    private final ClientIdentiteKpiRepository identiteRepo;
-    private final ClientFormationKpiRepository formationRepo;
     private final ClientPopulationKpiRepository populationRepo;
-    private final ClientEfficaciteKpiRepository efficaciteRepo;
+    private final ClientParticipantsByDepartmentKpiRepository participantsDeptRepo;
+    private final ClientHoursByDepartmentKpiRepository hoursDeptRepo;
+    private final ClientHoursByFournisseurKpiRepository hoursFournisseurRepo;
+    private final ClientHoursByFamilleFormationKpiRepository hoursFamilleRepo;
+    private final ClientFormationKpiRepository formationRepo;
+    private final TotalSessionsKpiRepository totalSessionsRepo;
+
+
 
     @Override
     public ClientKpiResponse getClientKpis(Integer clientId) {
-
-        // 1️⃣ Identité
-        ClientIdentiteKpiProjection identiteProjection = identiteRepo.computeIdentite(clientId);
-        ClientIdentiteKpiDto identite = mapIdentite(identiteProjection, clientId);
-
-
-        // 2️⃣ Volume
-        ClientVolumeKpiProjection volumeProjection = volumeRepo.computeVolume(clientId);
-        ClientVolumeKpiDto volume = mapVolume(volumeProjection);
 
         // 3️⃣ Financier
         ClientFinancierKpiProjection financierProjection = financierRepo.computeFinancier(clientId);
         ClientFinancierKpiDto financier = mapFinancier(financierProjection);
 
-
-        // 4️⃣ Formations
-        ClientFormationKpiProjection formationProjection = formationRepo.computeFormations(clientId);
-        ClientFormationKpiDto formations = mapFormations(formationProjection);
-
+        // 3️⃣a Financier par type de remboursement
+        List<ClientFinancierByRemboursementProjection> remboursementProj =
+                financierRepo.computeFinancierByRemboursement();
+        List<ClientFinancierByRemboursementDto> remboursementByType = remboursementProj.stream()
+                .map(p -> new ClientFinancierByRemboursementDto(
+                        p.getRemboursement(),
+                        BigDecimal.valueOf(p.getTotalHeures())
+                ))
+                .toList();
 
         // 5️⃣ Population
         List<RepartitionItemProjection> cspProj = populationRepo.countByCsp(clientId);
@@ -50,39 +49,80 @@ public class ClientKpiServiceImpl implements ClientKpiService {
         List<RepartitionItemProjection> typeContratProj = populationRepo.countByTypeContrat(clientId);
         List<RepartitionItemProjection> genreProj = populationRepo.countByGenre(clientId);
 
+        List<ClientGenderByDepartmentKpiProjection> genderDeptProj = populationRepo.getGenderByDepartmentForAllEntreprises();
+        List<GenderHoursKpiProjection> genderHoursProj = populationRepo.getTrainingHoursByGender();
+        List<CspHoursKpiProjection> cspHoursProj = populationRepo.getTrainingHoursByCsp();
+
+        // total participants
+        TotalParticipantsKpiProjection participantsProj = populationRepo.getTotalParticipants();
+        Long totalParticipants = participantsProj != null ? participantsProj.getTotalParticipants() : 0L;
+
+
+        List<EmployeGenderByDepartmentKpiDto> genderByDepartment = genderDeptProj.stream()
+                .map(p -> new EmployeGenderByDepartmentKpiDto(
+                        p.getDepartement(),
+                        p.getGenre(),
+                        p.getNombre()
+                ))
+                .toList();
+
+        List<GenderHoursKpiDto> genderHours = genderHoursProj.stream()
+                .map(p -> new GenderHoursKpiDto(
+                        p.getLabel(),
+                        p.getTotalHeures(),
+                        p.getNombreEmployes()
+                ))
+                .toList();
+
+        List<CspHoursKpiDto> cspHours = cspHoursProj.stream()
+                .map(p -> new CspHoursKpiDto(
+                        p.getCsp(),
+                        p.getTotalHeures(),
+                        p.getNombreEmployes()
+                ))
+                .toList();
+
         ClientPopulationKpiDto population = new ClientPopulationKpiDto(
                 mapRepartition(cspProj),
                 mapRepartition(fonctionProj),
                 mapRepartition(typeContratProj),
-                mapRepartition(genreProj)
+                mapRepartition(genreProj),
+                genderByDepartment,
+                genderHours,
+                cspHours,
+                totalParticipants
         );
 
-        // 6️⃣ Efficacité
-        ClientEfficaciteKpiProjection p = efficaciteRepo.computeEfficacite(clientId);
-        ClientEfficaciteKpiDto efficacite = mapEfficacite(p);
+
+        // 7️⃣ Other KPIs
+        List<ClientParticipantsByDepartmentKpiProjection> participantsDeptProj = participantsDeptRepo.findByClientId(clientId);
+        List<ClientHoursByDepartmentKpiProjection> hoursDeptProj = hoursDeptRepo.findByClientId(clientId);
+        List<ClientHoursByFournisseurKpiProjection> hoursFournisseurProj = hoursFournisseurRepo.findByClientId(clientId);
+        List<ClientHoursByFamilleFormationKpiProjection> hoursFamilleProj = hoursFamilleRepo.findByClientId(clientId);
+
+        List<ClientParticipantsByDepartmentKpiDto> participantsDept = mapParticipantsByDepartment(participantsDeptProj);
+        List<ClientHoursByDepartmentKpiDto> hoursDept = mapHoursByDepartment(hoursDeptProj);
+        List<ClientHoursByFournisseurKpiDto> hoursFournisseur = mapHoursByFournisseur(hoursFournisseurProj);
+        List<ClientHoursByFamilleFormationKpiDto> hoursFamille = mapHoursByFamilleFormation(hoursFamilleProj);
+
+        // Total Formation Hours
+        TotalFormationHoursProjection totalHoursProj = formationRepo.getTotalFormationHours();
+        double totalFormationHours = totalHoursProj != null ? totalHoursProj.getTotalHeures() : 0;
+
+        // Total sessions
+        Long totalSessions = totalSessionsRepo.getTotalSessions().getTotalSessions();
 
         return new ClientKpiResponse(
-                identite,
-                volume,
                 financier,
-                formations,
                 population,
-                efficacite
+                participantsDept,
+                hoursDept,
+                hoursFournisseur,
+                hoursFamille,
+                remboursementByType, // <-- new field for pie chart
+                totalFormationHours,
+                totalSessions
         );
-    }
-
-    private ClientEfficaciteKpiDto mapEfficacite(ClientEfficaciteKpiProjection p) {
-        if (p == null || p.getTotalEvals() == 0) {
-            return new ClientEfficaciteKpiDto(BigDecimal.ZERO, BigDecimal.ZERO, null);
-        }
-
-        BigDecimal tauxMoyen = p.getEvalCount() != 0
-                ? p.getSumTaux().divide(BigDecimal.valueOf(p.getEvalCount()), 2, BigDecimal.ROUND_HALF_UP)
-                : BigDecimal.ZERO;
-
-        BigDecimal pourcentageEvalue = BigDecimal.valueOf(p.getEvalCount() * 100.0 / p.getTotalEvals());
-
-        return new ClientEfficaciteKpiDto(pourcentageEvalue, tauxMoyen, p.getLastEvalDate());
     }
 
     private List<RepartitionKpiItemDto> mapRepartition(List<RepartitionItemProjection> items) {
@@ -90,21 +130,6 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 .map(p -> new RepartitionKpiItemDto(p.getLabel(), p.getCount()))
                 .toList();
     }
-
-    private ClientFormationKpiDto mapFormations(ClientFormationKpiProjection p) {
-        if (p == null) {
-            return new ClientFormationKpiDto(0, null, null, BigDecimal.ZERO, BigDecimal.ZERO);
-        }
-
-        return new ClientFormationKpiDto(
-                p.getTotalFormations().intValue(),
-                p.getFormationLaPlusSuivie(),
-                p.getFamillePrincipale(),
-                p.getPourcentageInterne(),
-                p.getPourcentageExterne()
-        );
-    }
-
 
     private ClientFinancierKpiDto mapFinancier(ClientFinancierKpiProjection p) {
         if (p == null) {
@@ -130,32 +155,31 @@ public class ClientKpiServiceImpl implements ClientKpiService {
         );
     }
 
-    private ClientVolumeKpiDto mapVolume(ClientVolumeKpiProjection p) {
-        if (p == null) {
-            return new ClientVolumeKpiDto(0, 0, BigDecimal.ZERO, BigDecimal.ZERO);
-        }
-
-        return new ClientVolumeKpiDto(
-                p.getTotalSessions().intValue(),
-                p.getTotalParticipants().intValue(),
-                p.getTotalJours(),
-                p.getTotalHeures()
-        );
+    private List<ClientParticipantsByDepartmentKpiDto> mapParticipantsByDepartment(
+            List<ClientParticipantsByDepartmentKpiProjection> projections) {
+        return projections.stream()
+                .map(p -> new ClientParticipantsByDepartmentKpiDto(p.getDepartement(), p.getNbParticipants()))
+                .toList();
     }
 
-    private ClientIdentiteKpiDto mapIdentite(ClientIdentiteKpiProjection p, Integer clientId) {
-        if (p == null) {
-            return new ClientIdentiteKpiDto(clientId, null, null, null, null, null);
-        }
-
-        return new ClientIdentiteKpiDto(
-                clientId,
-                p.getNomClient(),
-                p.getPremiereAnnee(),
-                p.getDerniereAnnee(),
-                p.getDatePremiere(),
-                p.getDateDerniere()
-        );
+    private List<ClientHoursByDepartmentKpiDto> mapHoursByDepartment(
+            List<ClientHoursByDepartmentKpiProjection> projections) {
+        return projections.stream()
+                .map(p -> new ClientHoursByDepartmentKpiDto(p.getDepartement(), p.getTotalHeures()))
+                .toList();
     }
 
+    private List<ClientHoursByFournisseurKpiDto> mapHoursByFournisseur(
+            List<ClientHoursByFournisseurKpiProjection> projections) {
+        return projections.stream()
+                .map(p -> new ClientHoursByFournisseurKpiDto(p.getFournisseur(), p.getTotalHeures()))
+                .toList();
+    }
+
+    private List<ClientHoursByFamilleFormationKpiDto> mapHoursByFamilleFormation(
+            List<ClientHoursByFamilleFormationKpiProjection> projections) {
+        return projections.stream()
+                .map(p -> new ClientHoursByFamilleFormationKpiDto(p.getFamilleFormation(), p.getTotalHeures()))
+                .toList();
+    }
 }
