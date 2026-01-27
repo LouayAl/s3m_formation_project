@@ -2,6 +2,7 @@ package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.domain.fiche.FicheTechniqueFormation;
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.*;
@@ -9,10 +10,10 @@ import lombok.*;
 @Getter
 @Setter
 @AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "formation")
 public class Formation {
-
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,10 +41,17 @@ public class Formation {
     @Column(name = "reference_formation", nullable = false, length = 50, unique = true)
     private String referenceFormation;
 
-    // --- Constructors ---
+    @Column(name = "d_heures")
+    private BigDecimal dureeHeures;
 
-    public Formation() {
-    }
+    @Column(name = "d_jours")
+    private BigDecimal dureeJours;
+
+    @Column(name = "prix_heure_mad")
+    private BigDecimal prixHeureMad;
+
+    @Column(name = "prix_jour_mad")
+    private BigDecimal prixJourMad;
 
     @JsonIgnore
     @OneToMany(

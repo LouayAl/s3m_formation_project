@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface EmployeRepository extends JpaRepository<Employe, Integer> {
     List<Employe> findByEntreprise_IdEntreprise(Integer idEntreprise);
+    boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
 
 }

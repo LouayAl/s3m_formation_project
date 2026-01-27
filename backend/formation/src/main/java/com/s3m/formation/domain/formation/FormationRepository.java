@@ -33,4 +33,20 @@ public interface FormationRepository extends JpaRepository<Formation, Integer> {
             @Param("type") String type,
             @Param("annee") Integer annee
     );
+
+    @Query("""
+        SELECT f 
+        FROM Formation f
+        WHERE (:module IS NULL OR f.module LIKE %:module%)
+          AND (:typeFormation IS NULL OR f.typeFormation = :typeFormation)
+          AND (:famille IS NULL OR f.familleFormation = :famille)
+          AND (:sousFamille IS NULL OR f.sousFamille = :sousFamille)
+        ORDER BY f.module
+    """)
+    List<Formation> search(
+            @Param("module") String module,
+            @Param("typeFormation") String typeFormation,
+            @Param("famille") String famille,
+            @Param("sousFamille") String sousFamille
+    );
 }

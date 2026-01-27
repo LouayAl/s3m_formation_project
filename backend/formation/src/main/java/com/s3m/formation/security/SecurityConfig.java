@@ -62,14 +62,18 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/formations/**",
+                                "/api/entreprises/**",
                                 "/api/fiches/**",
                                 "/api/test/**",
+                                "/api/saisie/**",
                                 "/actuator/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/demandes-reservation")
                         .hasRole("CLIENT")
                         .requestMatchers("/api/admin/**")
                         .hasRole("ADMIN")
+                        .requestMatchers("/api/sessions/**") // ✅ Require authentication
+                        .authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(

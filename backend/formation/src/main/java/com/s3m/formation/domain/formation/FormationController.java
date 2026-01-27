@@ -1,19 +1,17 @@
 package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.api.dto.FormationResponseDto;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/formations")
+@RequiredArgsConstructor
 public class FormationController {
 
     private final FormationService formationService;
-
-    public FormationController(FormationService formationService) {
-        this.formationService = formationService;
-    }
 
     @GetMapping
     public List<FormationResponseDto> getAllFormations() {
@@ -37,14 +35,26 @@ public class FormationController {
 
     @GetMapping("/filter")
     public List<FormationResponseDto> filter(
-            @RequestParam(required = false) String familleFormation,
-            @RequestParam(required = false) String typeFormation,
-            @RequestParam(required = false) Integer annee
+            @RequestParam(required = false) String module,
+            @RequestParam(required = false) String famille,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String sousFamille
     ) {
-        return formationService.filterFormations(
-                familleFormation,
-                typeFormation,
-                annee
-        );
+        return formationService.filterFormations(module, famille, type, sousFamille);
+    }
+
+    @PostMapping
+    public FormationResponseDto create(@RequestBody Formation formation) {
+        return formationService.createFormation(formation);
+    }
+
+    @PutMapping("/{id}")
+    public FormationResponseDto update(@PathVariable Integer id, @RequestBody Formation formation) {
+        return formationService.updateFormation(id, formation);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Integer id) {
+        formationService.deleteFormation(id);
     }
 }

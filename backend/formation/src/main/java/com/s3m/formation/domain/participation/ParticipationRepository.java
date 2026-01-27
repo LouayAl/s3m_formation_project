@@ -11,4 +11,5 @@ public interface ParticipationRepository
 
     long countBySession_IdSession(Integer sessionId);
 
+    boolean existsBySession_IdSessionAndEmploye_IdEmploye(Integer sessionId, Integer empId);
 }

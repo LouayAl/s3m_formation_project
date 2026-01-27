@@ -27,6 +27,9 @@ public class SessionFormation {
     @Column(name = "id_session")
     private Integer idSession;
 
+    @Column(name = "reference_session", unique = true)
+    private String referenceSession;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_formation", nullable = false)
     private Formation formation;
@@ -76,7 +79,7 @@ public class SessionFormation {
             nullable = false,
             unique = true
     )
-    private DemandeReservation demande;
+    private DemandeReservation demande; // let's ignore this for now we don't want to work on reservations yet
 
     public void demarrer(LocalDate today) {
 

@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.formateur;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import jakarta.persistence.*;
 import lombok.*;
@@ -29,5 +30,6 @@ public class Formateur {
             name = "id_fournisseur",
             referencedColumnName = "id_entreprise"
     )
+    @JsonIgnore
     private Entreprise entreprise;
 }

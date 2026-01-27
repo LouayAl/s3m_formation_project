@@ -7,7 +7,10 @@ public class SecurityContextUtils {
 
     public static Integer getEntrepriseId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null ? (Integer) auth.getDetails() : null;
+        if (auth != null && auth.getDetails() instanceof Integer) {
+            return (Integer) auth.getDetails();
+        }
+        return null;
     }
 
     public static String getEmail() {

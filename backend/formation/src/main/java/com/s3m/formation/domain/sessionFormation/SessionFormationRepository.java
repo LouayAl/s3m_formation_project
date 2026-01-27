@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -52,6 +53,18 @@ public interface SessionFormationRepository
 
     List<SessionFormation> findByDemande_Entreprise_IdEntreprise(Integer idEntreprise);
 
-
+    @Query("""
+        SELECT COUNT(s)
+        FROM SessionFormation s
+        WHERE s.formation.idFormation = :idFormation
+          AND EXTRACT(YEAR FROM s.dateDebut) = :year
+          AND s.dHeures = :heures
+    """)
+    long countByModuleAndYearAndHeures(
+            @Param("idFormation") Integer idFormation,
+            @Param("year") int year,
+            @Param("heures") BigDecimal heures
+    );
+    boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
 
 }
