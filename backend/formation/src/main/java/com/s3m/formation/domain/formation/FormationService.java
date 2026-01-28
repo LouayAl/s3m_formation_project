@@ -105,6 +105,7 @@ public class FormationService {
                 formation.getModule(),
                 formation.getTypeFormation(),
                 formation.getFamilleFormation(),
+                formation.getInterneExterne(),
                 formation.getSousFamille(),
                 formation.getReferenceFormation(),
                 formation.getAnnee(),

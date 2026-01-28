@@ -79,8 +79,9 @@ public class SessionFormation {
             nullable = false,
             unique = true
     )
-    private DemandeReservation demande; // let's ignore this for now we don't want to work on reservations yet
+    // let's ignore this for now we don't want to work on reservations yet
 
+    private DemandeReservation demande;
     public void demarrer(LocalDate today) {
 
         if (this.statut != SessionFormationStatut.PLANIFIEE) {

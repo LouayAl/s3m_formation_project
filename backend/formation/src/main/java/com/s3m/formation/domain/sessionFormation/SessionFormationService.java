@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.sessionFormation;
 
-import com.s3m.formation.api.dto.SessionResponseDto;
+import com.s3m.formation.api.dto.SessionFormationResponseDto;
+import com.s3m.formation.api.dto.UpdateSessionRequest;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.formateur.FormateurRepository;
@@ -10,6 +11,8 @@ import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFo
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAuditRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional
 public class SessionFormationService {
+    private static final Logger log = LoggerFactory.getLogger(SessionFormationService.class);
 
     private final SessionFormationRepository repository;
     private final SessionFormationAuditRepository auditRepository;
@@ -36,17 +40,113 @@ public class SessionFormationService {
        READ
        ========================= */
 
-    public List<SessionResponseDto> getSessionsByFormation(Integer formationId) {
+    public List<SessionFormationResponseDto> getAllSessions() {
+        return repository.findAll()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    public List<SessionFormationResponseDto> getSessionsByFormation(Integer formationId) {
         return repository.findByFormation_IdFormation(formationId)
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
-    public SessionResponseDto getSession(Integer sessionId) {
+    public SessionFormationResponseDto getSession(Integer sessionId) {
         return repository.findById(sessionId)
                 .map(this::toDto)
                 .orElse(null);
+    }
+
+    /* =========================
+       CREATE
+       ========================= */
+
+    public SessionFormation createSession(CreateSessionRequest request) {
+        try {
+            return createSessionInternal(request);
+        } catch (DataIntegrityViolationException e) {
+            // Retry once if reference collision happens
+            return createSessionInternal(request);
+        }
+    }
+
+    private SessionFormation createSessionInternal(CreateSessionRequest request) {
+        Formation formation = formationRepository.findById(request.getIdFormation())
+                .orElseThrow(() -> new RuntimeException("Formation not found"));
+
+        Entreprise entreprise = entrepriseRepository.findById(request.getIdEntreprise())
+                .orElseThrow(() -> new RuntimeException("Entreprise not found"));
+
+        SessionFormation session = SessionFormation.builder()
+                .formation(formation)
+                .dateDebut(request.getDateDebut())
+                .dateFin(request.getDateFin())
+                .dHeures(request.getDHeures())
+                .dJours(request.getDHeures().divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP))
+                .statut(SessionFormationStatut.PLANIFIEE)
+                .formateur(request.getIdFormateur() != null
+                        ? formateurRepository.findById(request.getIdFormateur()).orElse(null)
+                        : null)
+                .entreprise(entreprise)
+                .fournisseur(request.getIdFournisseur() != null
+                        ? entrepriseRepository.findById(request.getIdFournisseur()).orElse(null)
+                        : null)
+                .build();
+
+        String ref = generateReference(session);
+        session.setReferenceSession(ref);
+
+        return repository.save(session);
+    }
+
+    /* =========================
+       UPDATE
+       ========================= */
+    public SessionFormationResponseDto updateSession(Integer sessionId, UpdateSessionRequest request) {
+
+        log.info("Update request received: {}", request);
+
+        SessionFormation existing = repository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        log.info("Existing session before update: dHeures={}, dJours={}", existing.getDHeures(), existing.getDJours());
+
+        if (request.dHeures() != null) {
+            existing.setDHeures(request.dHeures());
+            existing.setDJours(request.dHeures().divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP));
+        }
+        if (request.dateDebut() != null) existing.setDateDebut(request.dateDebut());
+        if (request.dateFin() != null) existing.setDateFin(request.dateFin());
+        if (request.idFormateur() != null)
+            existing.setFormateur(formateurRepository.findById(request.idFormateur()).orElse(null));
+        if (request.idEntreprise() != null)
+            existing.setEntreprise(entrepriseRepository.findById(request.idEntreprise()).orElse(null));
+        if (request.idFournisseur() != null)
+            existing.setFournisseur(entrepriseRepository.findById(request.idFournisseur()).orElse(null));
+        if (request.idFormation() != null)
+            existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
+        if (request.statut() != null) existing.setStatut(request.statut());
+
+        log.info("Existing session after update: dHeures={}, dJours={}", existing.getDHeures(), existing.getDJours());
+
+        SessionFormation saved = repository.save(existing);
+        log.info("Session saved: {}", saved.getIdSession());
+
+        return toDto(saved);
+    }
+
+
+    /* =========================
+       DELETE
+       ========================= */
+
+    public void deleteSession(Integer sessionId) {
+        SessionFormation session = repository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+        repository.delete(session);
     }
 
     /* =========================
@@ -82,7 +182,6 @@ public class SessionFormationService {
     private void auditTransition(SessionFormation session,
                                  SessionFormationStatut avant,
                                  SessionFormationStatut apres) {
-
         String emailAdmin = SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getName();
@@ -98,62 +197,29 @@ public class SessionFormationService {
         auditRepository.save(audit);
     }
 
-    SessionResponseDto toDto(SessionFormation session) {
-        return new SessionResponseDto(
-                session.getIdSession(),
-                session.getDateDebut(),
-                session.getDateFin(),
-                session.getStatut(),
-                session.getFormateur() != null
-                        ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom()
-                        : null,
-                session.getFournisseur() != null
-                        ? session.getFournisseur().getNomEntreprise()
-                        : null
-        );
-    }
-
     /* =========================
-       CREATE SESSION (SAFE)
+       DTO MAPPING
        ========================= */
 
-    public SessionFormation createSession(CreateSessionRequest request) {
-        try {
-            return createSessionInternal(request);
-        } catch (DataIntegrityViolationException e) {
-            // Retry once if reference collision happens
-            return createSessionInternal(request);
-        }
-    }
+    public SessionFormationResponseDto toDto(SessionFormation session) {
+        String formateurNomComplet = session.getFormateur() != null
+                ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom()
+                : null;
 
-    private SessionFormation createSessionInternal(CreateSessionRequest request) {
-
-        Formation formation = formationRepository.findById(request.getIdFormation())
-                .orElseThrow(() -> new RuntimeException("Formation not found"));
-
-        Entreprise entreprise = entrepriseRepository.findById(request.getIdEntreprise())
-                .orElseThrow(() -> new RuntimeException("Entreprise not found"));
-
-        SessionFormation session = SessionFormation.builder()
-                .formation(formation)
-                .dateDebut(request.getDateDebut())
-                .dateFin(request.getDateFin())
-                .dHeures(request.getDHeures())
-                .dJours(request.getDHeures().divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP))
-                .statut(SessionFormationStatut.PLANIFIEE)
-                .formateur(request.getIdFormateur() != null
-                        ? formateurRepository.findById(request.getIdFormateur()).orElse(null)
-                        : null)
-                .entreprise(entreprise)
-                .fournisseur(request.getIdFournisseur() != null
-                        ? entrepriseRepository.findById(request.getIdFournisseur()).orElse(null)
-                        : null)
-                .build();
-
-        String ref = generateReference(session);
-        session.setReferenceSession(ref);
-
-        return repository.save(session);
+        return new SessionFormationResponseDto(
+                session.getIdSession(),
+                session.getReferenceSession(),
+                session.getFormation().getIdFormation(),
+                session.getFormation().getModule(),
+                session.getEntreprise() != null ? session.getEntreprise().getNomEntreprise() : null,
+                session.getFournisseur() != null ? session.getFournisseur().getNomEntreprise() : null,
+                formateurNomComplet,
+                session.getDateDebut(),
+                session.getDateFin(),
+                session.getDHeures(),
+                session.getDJours(),
+                session.getStatut()
+        );
     }
 
     /* =========================
@@ -161,30 +227,19 @@ public class SessionFormationService {
        ========================= */
 
     private String generateReference(SessionFormation session) {
-
-        if (session.getFormation() == null || session.getDateDebut() == null || session.getDHeures() == null) {
-            throw new IllegalStateException("Impossible de générer la référence : données incomplètes");
+        if (session.getFormation() == null || session.getFormation().getModule() == null) {
+            throw new IllegalStateException("Impossible de générer la référence : formation manquante");
         }
 
-        String module = session.getFormation().getModule();
-        String moduleCode = module.substring(0, Math.min(3, module.length()))
+        String moduleCode = session.getFormation().getModule()
+                .substring(0, Math.min(3, session.getFormation().getModule().length()))
                 .toUpperCase();
 
-        int heures = session.getDHeures().intValue();
-        int year = session.getDateDebut().getYear();
-
-        long count = repository.countByModuleAndYearAndHeures(
-                session.getFormation().getIdFormation(),
-                year,
-                session.getDHeures()
-        );
-
-        return String.format(
-                "%s-%dH-%d-%03d",
-                moduleCode,
-                heures,
-                year,
-                count + 1
-        );
+        String reference;
+        do {
+            int randomNumber = (int) (Math.random() * 9000) + 1000;
+            reference = String.format("%s-%d", moduleCode, randomNumber);
+        } while (repository.existsByReferenceSession(reference));
+        return reference;
     }
 }

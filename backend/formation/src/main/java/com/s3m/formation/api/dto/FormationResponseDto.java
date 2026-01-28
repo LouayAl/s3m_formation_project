@@ -7,6 +7,7 @@ public record FormationResponseDto(
         String module,
         String typeFormation,
         String familleFormation,
+        String interneExterne,
         String sousFamille,
         String referenceFormation,
         Integer annee,

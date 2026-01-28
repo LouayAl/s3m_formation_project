@@ -67,4 +67,41 @@ public interface SessionFormationRepository
     );
     boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
 
+    // Fetch all sessions with all related entities to avoid lazy-loading issues
+    @Query("""
+        SELECT s 
+        FROM SessionFormation s
+        JOIN FETCH s.formation f
+        LEFT JOIN FETCH s.formateur fo
+        LEFT JOIN FETCH s.entreprise e
+        LEFT JOIN FETCH s.fournisseur fu
+        ORDER BY s.dateDebut DESC
+    """)
+    List<SessionFormation> findAllWithRelations();
+
+    // Search/filter sessions by formation, entreprise, statut, date, etc.
+    @Query("""
+        SELECT s 
+        FROM SessionFormation s
+        JOIN FETCH s.formation f
+        LEFT JOIN FETCH s.formateur fo
+        LEFT JOIN FETCH s.entreprise e
+        LEFT JOIN FETCH s.fournisseur fu
+        WHERE (:statut IS NULL OR s.statut = :statut)
+          AND (:formationId IS NULL OR f.idFormation = :formationId)
+          AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+          AND (:startDate IS NULL OR s.dateDebut >= :startDate)
+          AND (:endDate IS NULL OR s.dateFin <= :endDate)
+        ORDER BY s.dateDebut DESC
+    """)
+    List<SessionFormation> search(
+            @Param("statut") SessionFormationStatut statut,
+            @Param("formationId") Integer formationId,
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate
+    );
+
+    boolean existsByFormation_IdFormation(Integer idFormation);
+    boolean existsByReferenceSession(String referenceSession);
 }

@@ -53,27 +53,24 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> {}) // ⭐ ENABLE CORS
-                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {}) // enable CORS
+                .csrf(csrf -> csrf.disable()) // disable CSRF since it's a REST API
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // public endpoints
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/api/formations/**",
                                 "/api/entreprises/**",
+                                "/api/employes/**",
                                 "/api/fiches/**",
                                 "/api/test/**",
-                                "/api/saisie/**",
+                                "/api/sessions/**",
                                 "/actuator/**"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/demandes-reservation")
-                        .hasRole("CLIENT")
-                        .requestMatchers("/api/admin/**")
-                        .hasRole("ADMIN")
-                        .requestMatchers("/api/sessions/**") // ✅ Require authentication
-                        .authenticated()
+                        // all other endpoints require authentication
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
@@ -83,6 +80,7 @@ public class SecurityConfig {
 
         return http.build();
     }
+
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {

@@ -27,10 +27,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
-        return buildResponse(
-                HttpStatus.BAD_REQUEST,
-                "Request violates database constraints"
-        );
+        String rootMessage = ex.getMostSpecificCause().getMessage();
+        String message = "Impossible de supprimer cet élément car il est utilisé dans d'autres données.";
+
+        // Employé → Participation
+        if (rootMessage.contains("fk_participation_employe")) {
+            message = "Impossible de supprimer cet employé car il a déjà participé à une session de formation.";
+        }
+        return buildResponse(HttpStatus.BAD_REQUEST, message);
+
     }
 
 
