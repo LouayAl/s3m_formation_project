@@ -1,5 +1,6 @@
 package com.s3m.formation.domain.employe;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.s3m.formation.domain.departement.Departement;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import jakarta.persistence.*;
@@ -7,6 +8,7 @@ import lombok.*;
 
 import java.time.LocalDate;
 
+@Builder
 @Entity
 @Table(name = "employe")
 @Getter
@@ -25,8 +27,10 @@ public class Employe {
 
     @Column(unique = true)
     private String email;
-
+    private String cnss;
     private String cin;
+
+    @Column(unique = true)
     private String matricule;
     private String csp;
     private String fonction;
@@ -43,4 +47,9 @@ public class Employe {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_entreprise")
     private Entreprise entreprise;
+
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "id_manager")
+//    @JsonIgnore
+//    private Employe manager;
 }

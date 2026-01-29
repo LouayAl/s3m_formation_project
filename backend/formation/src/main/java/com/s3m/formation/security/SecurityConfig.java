@@ -68,6 +68,7 @@ public class SecurityConfig {
                                 "/api/fiches/**",
                                 "/api/test/**",
                                 "/api/sessions/**",
+                                "/api/departements/**",
                                 "/actuator/**"
                         ).permitAll()
                         // all other endpoints require authentication

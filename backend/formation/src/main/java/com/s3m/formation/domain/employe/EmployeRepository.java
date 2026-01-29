@@ -37,4 +37,6 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
             @Param("fonction") String fonction,
             @Param("entrepriseId") Integer entrepriseId
     );
+
+    boolean existsByMatricule(String matricule);
 }
