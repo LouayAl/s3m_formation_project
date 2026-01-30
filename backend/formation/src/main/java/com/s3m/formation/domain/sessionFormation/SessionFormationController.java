@@ -4,7 +4,9 @@ import com.s3m.formation.api.dto.SessionFormationResponseDto;
 import com.s3m.formation.api.dto.UpdateSessionRequest;
 import com.s3m.formation.domain.participation.AddParticipantsRequest;
 import com.s3m.formation.domain.participation.ParticipationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,7 +46,8 @@ public class SessionFormationController {
        ========================= */
 
     @PostMapping
-    public SessionFormationResponseDto createSession(@RequestBody CreateSessionRequest request) {
+    @ResponseStatus(HttpStatus.CREATED)
+    public SessionFormationResponseDto createSession(@Valid @RequestBody CreateSessionRequest request) {
         return service.toDto(service.createSession(request));
     }
 
@@ -91,11 +94,11 @@ public class SessionFormationController {
        PARTICIPANTS
        ========================= */
 
-    @PostMapping("/{sessionId}/participants")
-    public void addParticipants(
-            @PathVariable Integer sessionId,
-            @RequestBody AddParticipantsRequest request
-    ) {
-        participationService.addParticipants(sessionId, request.getEmployeIds());
-    }
+//    @PostMapping("/{sessionId}/participants")
+//    public void addParticipants(
+//            @PathVariable Integer sessionId,
+//            @RequestBody AddParticipantsRequest request
+//    ) {
+//        participationService.addParticipants(sessionId, request.getEmployeIds());
+//    }
 }

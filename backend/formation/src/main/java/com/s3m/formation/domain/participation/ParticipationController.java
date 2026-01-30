@@ -3,10 +3,8 @@ package com.s3m.formation.domain.participation;
 
 import com.s3m.formation.api.dto.ParticipantResponseDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -29,5 +27,14 @@ public class ParticipationController {
             @PathVariable Integer sessionId
     ) {
         return service.countParticipants(sessionId);
+    }
+
+    @PostMapping("/{sessionId}/participants")
+    @ResponseStatus(HttpStatus.CREATED)
+    public void addParticipants(
+            @PathVariable Integer sessionId,
+            @RequestBody List<Integer> employeIds
+    ) {
+        service.addParticipants(sessionId, employeIds);
     }
 }
