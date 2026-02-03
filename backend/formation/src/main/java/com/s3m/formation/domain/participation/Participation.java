@@ -31,4 +31,9 @@ public class Participation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_employe", nullable = false)
     private Employe employe;
+
+    public Participation(SessionFormation session, Employe employe) {
+        this.session = session;
+        this.employe = employe;
+    }
 }

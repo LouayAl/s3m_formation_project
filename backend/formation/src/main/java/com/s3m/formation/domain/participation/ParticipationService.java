@@ -1,17 +1,20 @@
 package com.s3m.formation.domain.participation;
 
-
 import com.s3m.formation.api.dto.ParticipantResponseDto;
 import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class ParticipationService {
 
     private final ParticipationRepository participationRepository;
@@ -35,13 +38,14 @@ public class ParticipationService {
         return participationRepository.countBySession_IdSession(sessionId);
     }
 
+    // Add multiple participants
     public void addParticipants(Integer sessionId, List<Integer> employeIds) {
         SessionFormation session = sessionRepository.findById(sessionId)
-                .orElseThrow(() -> new RuntimeException("Session not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
         for (Integer empId : employeIds) {
             Employe employe = employeRepository.findById(empId)
-                    .orElseThrow(() -> new RuntimeException("Employe not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Employé not found: " + empId));
 
             if (!participationRepository.existsBySession_IdSessionAndEmploye_IdEmploye(sessionId, empId)) {
                 Participation participation = new Participation();
@@ -49,6 +53,22 @@ public class ParticipationService {
                 participation.setEmploye(employe);
                 participationRepository.save(participation);
             }
+        }
+    }
+
+    public void deleteParticipant(Integer sessionId, Integer employeId) {
+        Participation participation = participationRepository
+                .findBySession_IdSessionAndEmploye_IdEmploye(sessionId, employeId)
+                .orElseThrow(() -> new EntityNotFoundException("Participant not found"));
+
+        participationRepository.delete(participation);
+    }
+
+    // Delete multiple participants
+    public void deleteParticipants(Integer sessionId, List<Integer> employeIds) {
+        for (Integer empId : employeIds) {
+            participationRepository.findBySession_IdSessionAndEmploye_IdEmploye(sessionId, empId)
+                    .ifPresent(participationRepository::delete);
         }
     }
 }

@@ -4,6 +4,7 @@ import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public record SessionFormationResponseDto(
         Integer idSession,
@@ -17,6 +18,8 @@ public record SessionFormationResponseDto(
         LocalDate dateFin,
         BigDecimal dHeures,
         BigDecimal dJours,
-        SessionFormationStatut statut
+        SessionFormationStatut statut,
+        int participantsCount,
+        List<ParticipantResponseDto> participants
         ) {
 }

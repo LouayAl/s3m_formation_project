@@ -1,12 +1,16 @@
 package com.s3m.formation.domain.sessionFormation;
 
+import com.s3m.formation.api.dto.ParticipantResponseDto;
 import com.s3m.formation.api.dto.SessionFormationResponseDto;
 import com.s3m.formation.api.dto.UpdateSessionRequest;
+import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.formateur.FormateurRepository;
 import com.s3m.formation.domain.formation.Formation;
 import com.s3m.formation.domain.formation.FormationRepository;
+import com.s3m.formation.domain.participation.Participation;
+import com.s3m.formation.domain.participation.ParticipationRepository;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAudit;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAuditRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -35,6 +39,8 @@ public class SessionFormationService {
     private final FormationRepository formationRepository;
     private final FormateurRepository formateurRepository;
     private final EntrepriseRepository entrepriseRepository;
+    private final ParticipationRepository participationRepository;
+    private final EmployeRepository employeRepository;
 
     /* =========================
        READ
@@ -85,7 +91,7 @@ public class SessionFormationService {
                 .dateDebut(request.getDateDebut())
                 .dateFin(request.getDateFin())
                 .dHeures(request.getDHeures())
-                .dJours(request.getDHeures().divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP))
+                .dJours(request.getDJours())
                 .statut(SessionFormationStatut.PLANIFIEE)
                 .formateur(request.getIdFormateur() != null
                         ? formateurRepository.findById(request.getIdFormateur()).orElse(null)
@@ -116,7 +122,7 @@ public class SessionFormationService {
 
         if (request.dHeures() != null) {
             existing.setDHeures(request.dHeures());
-            existing.setDJours(request.dHeures().divide(BigDecimal.valueOf(8), 2, RoundingMode.HALF_UP));
+            existing.setDJours(request.dJours());
         }
         if (request.dateDebut() != null) existing.setDateDebut(request.dateDebut());
         if (request.dateFin() != null) existing.setDateFin(request.dateFin());
@@ -206,6 +212,24 @@ public class SessionFormationService {
                 ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom()
                 : null;
 
+        // Map participations to ParticipantResponseDto
+        List<ParticipantResponseDto> participants = session.getParticipations() != null
+                ? session.getParticipations().stream()
+                .map(p -> {
+                    var e = p.getEmploye(); // assuming Participation has a getEmploye() method
+                    return new ParticipantResponseDto(
+                            e.getIdEmploye(),
+                            e.getNom(),
+                            e.getPrenom(),
+                            e.getEmail(),
+                            e.getTelephone()
+                    );
+                })
+                .toList()
+                : List.of();
+
+        int count = participants.size();
+
         return new SessionFormationResponseDto(
                 session.getIdSession(),
                 session.getReferenceSession(),
@@ -218,7 +242,9 @@ public class SessionFormationService {
                 session.getDateFin(),
                 session.getDHeures(),
                 session.getDJours(),
-                session.getStatut()
+                session.getStatut(),
+                count,
+                participants
         );
     }
 
@@ -241,5 +267,30 @@ public class SessionFormationService {
             reference = String.format("%s-%d", moduleCode, randomNumber);
         } while (repository.existsByReferenceSession(reference));
         return reference;
+    }
+
+    public void updateParticipants(Integer sessionId, List<Integer> participantIds) {
+        // Get the session
+        SessionFormation session = repository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        // Get currently added participants
+        List<Participation> currentParticipations = session.getParticipations();
+
+        // Remove participants not in the new list
+        currentParticipations.stream()
+                .filter(p -> !participantIds.contains(p.getEmploye().getIdEmploye()))
+                .forEach(participationRepository::delete);
+
+        // Add new participants that are not already added
+        participantIds.forEach(id -> {
+            boolean alreadyExists = currentParticipations.stream()
+                    .anyMatch(p -> p.getEmploye().getIdEmploye().equals(id));
+            if (!alreadyExists) {
+                participationRepository.save(
+                        new Participation(session, employeRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Employe not found")))
+                );
+            }
+        });
     }
 }

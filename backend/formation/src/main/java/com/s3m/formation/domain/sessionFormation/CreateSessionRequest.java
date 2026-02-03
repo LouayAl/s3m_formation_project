@@ -21,6 +21,10 @@ public class CreateSessionRequest {
     @NotNull
     private BigDecimal dHeures;
 
+    @JsonProperty("dJours")
+    @NotNull
+    private BigDecimal dJours;
+
     @NotNull
     private LocalDate dateDebut;
 

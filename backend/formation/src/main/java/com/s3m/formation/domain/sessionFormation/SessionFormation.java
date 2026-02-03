@@ -72,14 +72,14 @@ public class SessionFormation {
             this.statut = SessionFormationStatut.PLANIFIEE;
         }
     }
-
+    // let's ignore this for now we don't want to work on reservations yet
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_demande",
             nullable = false,
             unique = true
     )
-    // let's ignore this for now we don't want to work on reservations yet
+
 
     private DemandeReservation demande;
     public void demarrer(LocalDate today) {

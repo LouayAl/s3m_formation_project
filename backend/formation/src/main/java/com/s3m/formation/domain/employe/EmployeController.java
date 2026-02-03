@@ -63,7 +63,7 @@ public class EmployeController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    public EmployeResponseDto update(@PathVariable Integer id, @RequestBody Employe employe) {
+    public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
         log.info("PUT /api/employes/{}", id);
         log.info("Payload received: {}", employe);
 
