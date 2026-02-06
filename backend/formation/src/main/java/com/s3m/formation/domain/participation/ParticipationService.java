@@ -29,7 +29,8 @@ public class ParticipationService {
                         p.getEmploye().getNom(),
                         p.getEmploye().getPrenom(),
                         p.getEmploye().getEmail(),
-                        p.getEmploye().getTelephone()
+                        p.getEmploye().getTelephone(),
+                        p.getEmploye().getMatricule()
                 ))
                 .toList();
     }

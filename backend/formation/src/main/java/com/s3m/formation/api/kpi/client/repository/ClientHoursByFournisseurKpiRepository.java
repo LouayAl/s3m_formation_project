@@ -11,17 +11,18 @@ import java.util.List;
 public interface ClientHoursByFournisseurKpiRepository extends JpaRepository<SessionFormation, Integer> {
 
     @Query("""
-        SELECT
-            f.nomEntreprise AS fournisseur,
-            SUM(s.dHeures) AS totalHeures
-        FROM SessionFormation s
-        JOIN s.fournisseur f
-        WHERE s.entreprise.idEntreprise = :clientId
-        GROUP BY f.nomEntreprise
-        ORDER BY totalHeures DESC
-    """)
+    SELECT 
+        s.fournisseur.nomEntreprise AS fournisseur,
+        SUM(s.formation.dureeHeures) AS totalHeures
+    FROM Participation p
+    JOIN p.session s
+    WHERE s.entreprise.idEntreprise = :clientId
+    GROUP BY s.fournisseur.nomEntreprise
+    ORDER BY totalHeures DESC
+""")
     List<ClientHoursByFournisseurKpiProjection> findByClientId(
             @Param("clientId") Integer clientId
     );
+
 
 }

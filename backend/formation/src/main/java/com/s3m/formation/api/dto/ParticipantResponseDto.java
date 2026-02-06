@@ -5,6 +5,7 @@ public record ParticipantResponseDto(
         String nom,
         String prenom,
         String email,
-        String telephone
+        String telephone,
+        String matricule
 ) {
 }

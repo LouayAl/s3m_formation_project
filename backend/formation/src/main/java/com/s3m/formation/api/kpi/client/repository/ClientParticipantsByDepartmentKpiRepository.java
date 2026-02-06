@@ -9,20 +9,18 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ClientParticipantsByDepartmentKpiRepository extends JpaRepository<Participation, Integer> {
-    @Query("""
-        SELECT
-            d.nom AS departement,
-            COUNT(DISTINCT e.idEmploye) AS nbParticipants
-        FROM SessionFormation s
-        JOIN s.participations p
-        JOIN p.employe e
-        JOIN e.departement d
-        WHERE s.entreprise.idEntreprise = :clientId
+    @Query(value = """
+        SELECT d.nom AS departement, COUNT(*) AS nbParticipants
+        FROM participation p
+        JOIN employe e ON p.id_employe = e.id_employe
+        JOIN departement d ON e.id_departement = d.id_departement
+        WHERE e.id_entreprise = :clientId
         GROUP BY d.nom
         ORDER BY nbParticipants DESC
-    """)
+    """, nativeQuery = true)
     List<ClientParticipantsByDepartmentKpiProjection> findByClientId(
             @Param("clientId") Integer clientId
     );
+
 
 }

@@ -222,7 +222,8 @@ public class SessionFormationService {
                             e.getNom(),
                             e.getPrenom(),
                             e.getEmail(),
-                            e.getTelephone()
+                            e.getTelephone(),
+                            e.getMatricule()
                     );
                 })
                 .toList()
