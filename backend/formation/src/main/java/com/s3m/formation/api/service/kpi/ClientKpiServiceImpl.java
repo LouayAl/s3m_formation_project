@@ -107,7 +107,7 @@ public class ClientKpiServiceImpl implements ClientKpiService {
 
         // Total Formation Hours
         TotalFormationHoursProjection totalHoursProj = formationRepo.getTotalFormationHours();
-        double totalFormationHours = totalHoursProj != null ? totalHoursProj.getTotalHeures() : 0;
+        BigDecimal totalFormationHours = totalHoursProj != null ? totalHoursProj.getTotalHeures() : BigDecimal.ZERO;
 
         // Total sessions
         Long totalSessions = totalSessionsRepo.getTotalSessions().getTotalSessions();

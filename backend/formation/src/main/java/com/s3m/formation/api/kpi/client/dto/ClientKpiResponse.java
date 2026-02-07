@@ -1,5 +1,6 @@
 package com.s3m.formation.api.kpi.client.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public record ClientKpiResponse(
@@ -10,7 +11,7 @@ public record ClientKpiResponse(
         List<ClientHoursByFournisseurKpiDto> hoursByFournisseur, // used
         List<ClientHoursByFamilleFormationKpiDto> hoursByFamilleFormation, // used
         List<ClientFinancierByRemboursementDto> remboursementByType, // NEW field for pie chart // used
-        Double totalFormationHours,
+        BigDecimal totalFormationHours,
         Long totalSessions
         ) {
 }

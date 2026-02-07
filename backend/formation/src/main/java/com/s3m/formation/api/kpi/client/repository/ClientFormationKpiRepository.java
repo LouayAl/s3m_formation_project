@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface ClientFormationKpiRepository extends JpaRepository<SessionFormation, Integer> {
     @Query("""
-        SELECT COALESCE(SUM(s.dHeures), 0) AS totalHeures
-        FROM SessionFormation s
-    """)
+    SELECT COALESCE(SUM(f.dureeHeures), 0) AS totalHeures
+    FROM Participation p
+    JOIN p.session s
+    JOIN s.formation f
+""")
     TotalFormationHoursProjection getTotalFormationHours();
 }

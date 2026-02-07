@@ -26,14 +26,18 @@ public interface ClientFinancierKpiRepository extends JpaRepository<SessionForma
     ClientFinancierKpiProjection computeFinancier(@Param("clientId") Integer clientId);
 
     @Query("""
-        SELECT
-            COALESCE(c.remboursement, 'Non défini') AS remboursement,
-            COALESCE(SUM(s.dHeures), 0) AS totalHeures
-        FROM SessionFormation s
-        LEFT JOIN CoutFormation c ON c.session.idSession = s.idSession
-        GROUP BY c.remboursement
-        ORDER BY c.remboursement
-    """)
+    SELECT
+        c.remboursement AS remboursement,
+        SUM(s.dHeures) AS totalHeures,
+        COUNT(p.idParticipation) AS totalParticipants,
+        SUM(s.dHeures) * COUNT(p.idParticipation) AS totalHeuresParticipant
+    FROM CoutFormation c
+    JOIN c.session s
+    JOIN Participation p ON p.session.idSession = s.idSession
+    WHERE c.remboursement IN ('CSF', 'Emergence')
+    GROUP BY c.remboursement
+    ORDER BY c.remboursement
+""")
     List<ClientFinancierByRemboursementProjection> computeFinancierByRemboursement();
 
 }
