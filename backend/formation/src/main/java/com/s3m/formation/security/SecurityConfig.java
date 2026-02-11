@@ -49,32 +49,63 @@ public class SecurityConfig {
         return source;
     }
 
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//
+//        http
+//                .cors(cors -> {}) // enable CORS
+//                .csrf(csrf -> csrf.disable()) // disable CSRF since it's a REST API
+//                .sessionManagement(session ->
+//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+//                )
+//                .authorizeHttpRequests(auth -> auth
+//                        // public endpoints
+//                        .requestMatchers(
+//                                "/api/auth/**",
+//                                "/api/formations/**",
+//                                "/api/entreprises/**",
+//                                "/api/employes/**",
+//                                "/api/fiches/**",
+//                                "/api/test/**",
+//                                "/api/sessions/**",
+//                                "/api/departements/**",
+//                                "/api/formateurs/**",
+//                                "/actuator/**"
+//                        ).permitAll()
+//                        // all other endpoints require authentication
+//                        .anyRequest().authenticated()
+//                )
+//                .addFilterBefore(
+//                        jwtAuthenticationFilter(),
+//                        UsernamePasswordAuthenticationFilter.class
+//                );
+//
+//        return http.build();
+//    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> {}) // enable CORS
-                .csrf(csrf -> csrf.disable()) // disable CSRF since it's a REST API
+                .cors(cors -> {})
+                .csrf(csrf -> csrf.disable())
+
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+
                 .authorizeHttpRequests(auth -> auth
-                        // public endpoints
-                        .requestMatchers(
-                                "/api/auth/**",
-                                "/api/formations/**",
-                                "/api/entreprises/**",
-                                "/api/employes/**",
-                                "/api/fiches/**",
-                                "/api/test/**",
-                                "/api/sessions/**",
-                                "/api/departements/**",
-                                "/api/formateurs/**",
-                                "/actuator/**"
-                        ).permitAll()
-                        // all other endpoints require authentication
+
+                        // ✅ Only login/register is public
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // ✅ React preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 🔒 Everything else needs JWT
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(
                         jwtAuthenticationFilter(),
                         UsernamePasswordAuthenticationFilter.class

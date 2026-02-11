@@ -2,6 +2,7 @@ package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.api.dto.FormationResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -14,26 +15,31 @@ public class FormationController {
     private final FormationService formationService;
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<FormationResponseDto> getAllFormations() {
         return formationService.getAllFormations();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public FormationResponseDto getFormationById(@PathVariable Integer id) {
         return formationService.getFormationById(id);
     }
 
     @GetMapping("/reference/{reference}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public FormationResponseDto getByReference(@PathVariable String reference) {
         return formationService.getFormationByReference(reference);
     }
 
     @GetMapping("/search")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<FormationResponseDto> search(@RequestParam String keyword) {
         return formationService.searchFormations(keyword);
     }
 
     @GetMapping("/filter")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<FormationResponseDto> filter(
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String famille,
@@ -44,16 +50,19 @@ public class FormationController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public FormationResponseDto create(@RequestBody Formation formation) {
         return formationService.createFormation(formation);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public FormationResponseDto update(@PathVariable Integer id, @RequestBody Formation formation) {
         return formationService.updateFormation(id, formation);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public void delete(@PathVariable Integer id) {
         formationService.deleteFormation(id);
     }

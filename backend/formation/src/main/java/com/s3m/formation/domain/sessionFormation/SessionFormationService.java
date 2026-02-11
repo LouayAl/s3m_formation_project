@@ -18,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -175,6 +177,8 @@ public class SessionFormationService {
 
     public void annulerSession(Integer sessionId) {
         SessionFormation session = getSessionOrThrow(sessionId);
+
+
         SessionFormationStatut avant = session.getStatut();
         session.annuler();
         auditTransition(session, avant, session.getStatut());
@@ -271,11 +275,14 @@ public class SessionFormationService {
     }
 
     public void updateParticipants(Integer sessionId, List<Integer> participantIds) {
-        // Get the session
         SessionFormation session = repository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
-        // Get currently added participants
+        // Only allow managers to modify if session hasn't started
+        if (!currentUserIsAdmin() && session.getStatut() != SessionFormationStatut.PLANIFIEE) {
+            throw new IllegalStateException("Managers can only update participants before the session starts");
+        }
+
         List<Participation> currentParticipations = session.getParticipations();
 
         // Remove participants not in the new list
@@ -289,9 +296,24 @@ public class SessionFormationService {
                     .anyMatch(p -> p.getEmploye().getIdEmploye().equals(id));
             if (!alreadyExists) {
                 participationRepository.save(
-                        new Participation(session, employeRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Employe not found")))
+                        new Participation(session, employeRepository.findById(id)
+                                .orElseThrow(() -> new EntityNotFoundException("Employe not found")))
                 );
             }
         });
     }
+
+    private boolean currentUserIsAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+
+        // Check if any granted authority equals "ADMIN" (exact match with DB role)
+        for (GrantedAuthority authority : auth.getAuthorities()) {
+            if ("ADMIN".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

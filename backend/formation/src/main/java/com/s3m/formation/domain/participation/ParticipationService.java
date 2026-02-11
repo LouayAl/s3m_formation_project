@@ -5,11 +5,18 @@ import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -43,7 +50,7 @@ public class ParticipationService {
     public void addParticipants(Integer sessionId, List<Integer> employeIds) {
         SessionFormation session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
-
+        checkParticipantModificationAllowed(session);
         for (Integer empId : employeIds) {
             Employe employe = employeRepository.findById(empId)
                     .orElseThrow(() -> new EntityNotFoundException("Employé not found: " + empId));
@@ -58,6 +65,11 @@ public class ParticipationService {
     }
 
     public void deleteParticipant(Integer sessionId, Integer employeId) {
+        SessionFormation session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        checkParticipantModificationAllowed(session);
+
         Participation participation = participationRepository
                 .findBySession_IdSessionAndEmploye_IdEmploye(sessionId, employeId)
                 .orElseThrow(() -> new EntityNotFoundException("Participant not found"));
@@ -67,9 +79,45 @@ public class ParticipationService {
 
     // Delete multiple participants
     public void deleteParticipants(Integer sessionId, List<Integer> employeIds) {
+        SessionFormation session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        checkParticipantModificationAllowed(session);
+
         for (Integer empId : employeIds) {
             participationRepository.findBySession_IdSessionAndEmploye_IdEmploye(sessionId, empId)
                     .ifPresent(participationRepository::delete);
+        }
+    }
+
+    //Helper method for admin
+    private boolean isAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(role -> role.equals("ROLE_ADMIN"));
+    }
+
+    private void checkParticipantModificationAllowed(SessionFormation session) {
+
+        // ✅ ADMIN can always modify
+        if (isAdmin()) return;
+
+        // ❌ MANAGER locked once session started
+        if (session.getStatut() != SessionFormationStatut.PLANIFIEE) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Managers cannot modify participants once the session has started"
+            );
+        }
+
+        // Optional extra safety: also block if dateDebut is today/past
+        if (!session.getDateDebut().isAfter(LocalDate.now())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Participants cannot be modified on or after the start date"
+            );
         }
     }
 }

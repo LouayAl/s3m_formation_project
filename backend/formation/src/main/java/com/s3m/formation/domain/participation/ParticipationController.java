@@ -3,6 +3,7 @@ package com.s3m.formation.domain.participation;
 import com.s3m.formation.api.dto.ParticipantResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,11 +19,13 @@ public class ParticipationController {
        READ
        ========================= */
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<ParticipantResponseDto> getParticipants(@PathVariable Integer sessionId) {
         return service.getParticipantsBySession(sessionId);
     }
 
     @GetMapping("/count")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public long countParticipants(@PathVariable Integer sessionId) {
         return service.countParticipants(sessionId);
     }
@@ -32,6 +35,7 @@ public class ParticipationController {
        ========================= */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public void addParticipants(@PathVariable Integer sessionId,
                                 @RequestBody List<Integer> employeIds) {
         service.addParticipants(sessionId, employeIds);
@@ -42,6 +46,7 @@ public class ParticipationController {
    ========================= */
     @DeleteMapping("/{employeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public void deleteParticipant(
             @PathVariable Integer sessionId,
             @PathVariable Integer employeId
@@ -54,10 +59,10 @@ public class ParticipationController {
        ========================= */
     @DeleteMapping
     @ResponseStatus(HttpStatus.OK)
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public void deleteParticipants(@PathVariable Integer sessionId,
                                    @RequestBody List<Integer> employeIds) {
         service.deleteParticipants(sessionId, employeIds);
     }
-
 
 }

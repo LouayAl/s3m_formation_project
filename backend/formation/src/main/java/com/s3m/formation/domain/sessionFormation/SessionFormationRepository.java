@@ -104,4 +104,5 @@ public interface SessionFormationRepository
 
     boolean existsByFormation_IdFormation(Integer idFormation);
     boolean existsByReferenceSession(String referenceSession);
+    List<SessionFormation> findByStatut(SessionFormationStatut statut);
 }

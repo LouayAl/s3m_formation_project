@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -182,4 +185,98 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 .map(p -> new ClientHoursByFamilleFormationKpiDto(p.getFamilleFormation(), p.getTotalHeures()))
                 .toList();
     }
+
+    @Override
+    public TotalGrowthKpiDto getTotalGrowthKpi(
+            Integer entrepriseId,
+            String period,
+            String month
+    ) {
+
+        List<Object[]> rawData;
+
+        switch (period.toLowerCase()) {
+
+            case "daily" -> {
+
+                // ✅ Daily requires a month parameter
+                if (month == null || month.isBlank()) {
+                    throw new IllegalArgumentException(
+                            "Month is required for daily period (format: YYYY-MM)"
+                    );
+                }
+
+                rawData = formationRepo.getTotalGrowthByDayForEntreprise(
+                        entrepriseId,
+                        month
+                );
+            }
+
+            case "yearly" -> {
+                rawData = formationRepo.getTotalGrowthByYearForEntreprise(entrepriseId);
+            }
+
+            case "monthly" -> {
+                rawData = formationRepo.getTotalGrowthByMonthForEntreprise(entrepriseId);
+            }
+
+            default -> throw new IllegalArgumentException(
+                    "Invalid period: " + period + ". Allowed values: daily, monthly, yearly"
+            );
+        }
+
+        // ✅ Prepare chart structures
+        List<String> categories = new ArrayList<>();
+        List<Double> topData = new ArrayList<>();
+        List<Double> autresData = new ArrayList<>();
+
+        // ✅ Works for day/month/year
+        Map<String, String> topFormationsByPeriod = new LinkedHashMap<>();
+
+        // ✅ Handle empty result
+        if (rawData == null || rawData.isEmpty()) {
+            TotalGrowthKpiDto emptyDto = new TotalGrowthKpiDto();
+            emptyDto.setCategories(List.of());
+            emptyDto.setSeries(List.of());
+            emptyDto.setTopFormationsByMonth(Map.of());
+            return emptyDto;
+        }
+
+        // ✅ Fill DTO from query rows
+        for (Object[] row : rawData) {
+
+            String periodLabel = String.valueOf(row[0]);  // day/month/year label
+            String topFormation = String.valueOf(row[1]);
+
+            Double topHours = row[2] != null
+                    ? ((Number) row[2]).doubleValue()
+                    : 0.0;
+
+            Double autresHours = row[3] != null
+                    ? ((Number) row[3]).doubleValue()
+                    : 0.0;
+
+            categories.add(periodLabel);
+            topData.add(topHours);
+            autresData.add(autresHours);
+
+            topFormationsByPeriod.put(periodLabel, topFormation);
+        }
+
+        // ✅ Build final DTO
+        TotalGrowthKpiDto dto = new TotalGrowthKpiDto();
+        dto.setCategories(categories);
+
+        dto.setSeries(List.of(
+                new TotalGrowthKpiDto.SeriesData("Top Formation", topData),
+                new TotalGrowthKpiDto.SeriesData("Autres", autresData)
+        ));
+
+        // ⚠️ Still named "ByMonth" in DTO, but contains day/month/year
+        dto.setTopFormationsByMonth(topFormationsByPeriod);
+
+        return dto;
+    }
+
+
 }
