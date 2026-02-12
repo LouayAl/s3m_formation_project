@@ -215,6 +215,9 @@ public class SessionFormationService {
         String formateurNomComplet = session.getFormateur() != null
                 ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom()
                 : null;
+        System.out.println("FORMATEUR FK: " +
+                (session.getFormateur() != null ? session.getFormateur().getIdFormateur() : "NULL"));
+
 
         // Map participations to ParticipantResponseDto
         List<ParticipantResponseDto> participants = session.getParticipations() != null

@@ -39,7 +39,13 @@ public class SecurityConfig {
 
         config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000" ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Cookie",         // ✅ allow browser to send cookies
+                "Set-Cookie"      // ✅ allow server to set cookies
+        ));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
@@ -97,7 +103,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // ✅ Only login/register is public
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/auth/me").authenticated()
 
                         // ✅ React preflight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
