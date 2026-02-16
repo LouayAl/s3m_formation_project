@@ -11,8 +11,11 @@ public record SessionFormationResponseDto(
         String referenceSession,
         Integer formationId,
         String formation,
+        Integer idEntreprise,       // ✅ add
         String entrepriseNom,
+        Integer idFournisseur,      // ✅ add
         String fournisseurNom,
+        Integer idFormateur,        // ✅ add
         String formateurNomComplet,
         LocalDate dateDebut,
         LocalDate dateFin,

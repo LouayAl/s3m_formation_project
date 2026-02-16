@@ -49,7 +49,7 @@ public class SessionFormationService {
        ========================= */
 
     public List<SessionFormationResponseDto> getAllSessions() {
-        return repository.findAll()
+        return repository.findAllWithParticipants()
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -215,15 +215,12 @@ public class SessionFormationService {
         String formateurNomComplet = session.getFormateur() != null
                 ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom()
                 : null;
-        System.out.println("FORMATEUR FK: " +
-                (session.getFormateur() != null ? session.getFormateur().getIdFormateur() : "NULL"));
-
 
         // Map participations to ParticipantResponseDto
         List<ParticipantResponseDto> participants = session.getParticipations() != null
                 ? session.getParticipations().stream()
                 .map(p -> {
-                    var e = p.getEmploye(); // assuming Participation has a getEmploye() method
+                    var e = p.getEmploye();
                     return new ParticipantResponseDto(
                             e.getIdEmploye(),
                             e.getNom(),
@@ -241,10 +238,13 @@ public class SessionFormationService {
         return new SessionFormationResponseDto(
                 session.getIdSession(),
                 session.getReferenceSession(),
-                session.getFormation().getIdFormation(),
-                session.getFormation().getModule(),
+                session.getFormation() != null ? session.getFormation().getIdFormation() : null,
+                session.getFormation() != null ? session.getFormation().getModule() : null,
+                session.getEntreprise() != null ? session.getEntreprise().getIdEntreprise() : null,  // ✅ add ID
                 session.getEntreprise() != null ? session.getEntreprise().getNomEntreprise() : null,
+                session.getFournisseur() != null ? session.getFournisseur().getIdEntreprise() : null, // ✅ add ID
                 session.getFournisseur() != null ? session.getFournisseur().getNomEntreprise() : null,
+                session.getFormateur() != null ? session.getFormateur().getIdFormateur() : null,      // ✅ add ID
                 formateurNomComplet,
                 session.getDateDebut(),
                 session.getDateFin(),
@@ -255,6 +255,7 @@ public class SessionFormationService {
                 participants
         );
     }
+
 
     /* =========================
        REFERENCE GENERATION

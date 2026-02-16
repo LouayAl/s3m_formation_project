@@ -4,12 +4,19 @@ import com.s3m.formation.api.dto.EntrepriseResponseDto;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -89,6 +96,50 @@ public class EntrepriseService {
         entrepriseRepository.deleteById(id);
     }
 
+    public void importFromExcel(MultipartFile file) {
+        try (Workbook workbook = new XSSFWorkbook(file.getInputStream())) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            if (sheet == null) return;
+
+            List<Entreprise> entreprisesToSave = new ArrayList<>();
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) { // skip header
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                Cell cell = row.getCell(0); // first column: nomEntreprise
+                if (cell == null) continue;
+
+                String nomEntreprise = cell.getStringCellValue().trim();
+                if (nomEntreprise.isEmpty()) continue;
+
+                // ✅ Check for duplicates in DB before adding
+                if (entrepriseRepository.existsByNomEntreprise(nomEntreprise)) {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "Entreprise déjà existante : " + nomEntreprise
+                    );
+                }
+
+                Entreprise entreprise = new Entreprise();
+                entreprise.setNomEntreprise(nomEntreprise);
+                entreprisesToSave.add(entreprise);
+            }
+
+            // Save all non-duplicate entreprises
+            entrepriseRepository.saveAll(entreprisesToSave);
+
+        } catch (ResponseStatusException ex) {
+            // Re-throw so GlobalExceptionHandler handles it
+            throw ex;
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur import Excel Entreprises", e);
+        }
+    }
+
+
+
     // Convert entity to DTO
     private EntrepriseResponseDto toDto(Entreprise entreprise) {
         return new EntrepriseResponseDto(
@@ -96,4 +147,6 @@ public class EntrepriseService {
                 entreprise.getNomEntreprise()
         );
     }
+
+
 }

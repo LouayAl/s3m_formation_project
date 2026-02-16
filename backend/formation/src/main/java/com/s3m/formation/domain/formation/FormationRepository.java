@@ -11,6 +11,8 @@ public interface FormationRepository extends JpaRepository<Formation, Integer> {
 
     Optional<Formation> findByReferenceFormation(String referenceFormation);
 
+    Optional<Formation> findByModule(String module);
+
     boolean existsByReferenceFormation(String referenceFormation);
 
     @Query("""

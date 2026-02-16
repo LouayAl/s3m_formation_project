@@ -2,8 +2,10 @@ package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.api.dto.FormationResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -66,4 +68,15 @@ public class FormationController {
     public void delete(@PathVariable Integer id) {
         formationService.deleteFormation(id);
     }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    public ResponseEntity<String> importExcel(@RequestParam("file") MultipartFile file) {
+
+        String message = formationService.importFromExcel(file);
+
+        return ResponseEntity.ok(message);
+    }
+
+
 }

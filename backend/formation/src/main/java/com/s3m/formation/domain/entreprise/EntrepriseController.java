@@ -2,8 +2,10 @@ package com.s3m.formation.domain.entreprise;
 
 import com.s3m.formation.api.dto.EntrepriseResponseDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -49,4 +51,12 @@ public class EntrepriseController {
     public void deleteEntreprise(@PathVariable Integer id) {
         entrepriseService.deleteEntreprise(id);
     }
+
+    @PostMapping("/import")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    public void importEntreprises(@RequestParam("file") MultipartFile file) {
+        entrepriseService.importFromExcel(file);
+    }
+
 }

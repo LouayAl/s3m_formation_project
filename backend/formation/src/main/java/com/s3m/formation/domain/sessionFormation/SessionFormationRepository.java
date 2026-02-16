@@ -67,17 +67,14 @@ public interface SessionFormationRepository
     );
     boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
 
-    // Fetch all sessions with all related entities to avoid lazy-loading issues
+    // Fetch all sessions with entities to avoid lazy-loading issues
     @Query("""
-        SELECT s 
+        SELECT DISTINCT s
         FROM SessionFormation s
-        JOIN FETCH s.formation f
-        LEFT JOIN FETCH s.formateur fo
-        LEFT JOIN FETCH s.entreprise e
-        LEFT JOIN FETCH s.fournisseur fu
-        ORDER BY s.dateDebut DESC
-    """)
-    List<SessionFormation> findAllWithRelations();
+        LEFT JOIN FETCH s.participations p
+        LEFT JOIN FETCH p.employe
+        """)
+    List<SessionFormation> findAllWithParticipants();
 
     // Search/filter sessions by formation, entreprise, statut, date, etc.
     @Query("""
