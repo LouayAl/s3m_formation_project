@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -89,4 +90,14 @@ public class EmployeController {
         employeService.deleteEmploye(id);
         log.info("Employee deleted with id={}", id);
     }
+
+    @PostMapping("/import")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public String importEmployesExcel(@RequestParam("file") MultipartFile file) {
+
+        int imported = employeService.importFromExcel(file);
+
+        return imported + " employés importés avec succès.";
+    }
+
 }

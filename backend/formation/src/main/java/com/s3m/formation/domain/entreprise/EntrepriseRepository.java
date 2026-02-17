@@ -19,4 +19,6 @@ public interface EntrepriseRepository
     boolean existsByNomEntreprise(String nomEntreprise);
 
     Optional<Entreprise> findByNomEntreprise(String nomEntreprise);
+    Optional<Entreprise> findByNomEntrepriseIgnoreCase(String nom);
+
 }

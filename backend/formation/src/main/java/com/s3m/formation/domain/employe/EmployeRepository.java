@@ -39,4 +39,5 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
     );
 
     boolean existsByMatricule(String matricule);
+
 }
