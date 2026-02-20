@@ -11,7 +11,7 @@ import java.util.List;
 public interface ClientHoursByFamilleFormationKpiRepository extends JpaRepository<SessionFormation, Integer> {
     @Query("""
         SELECT
-            f.familleFormation AS famille,
+            f.familleFormation AS familleFormation,
             SUM(f.dureeHeures) AS totalHeures
         FROM Participation p
         JOIN p.session s

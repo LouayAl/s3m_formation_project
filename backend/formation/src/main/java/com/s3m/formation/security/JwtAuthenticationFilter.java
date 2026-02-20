@@ -36,7 +36,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        log.info("➡️ Request: {} {}", request.getMethod(), request.getRequestURI());
 
         String token = null;
 
@@ -46,10 +45,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (cookies == null) {
             log.warn("⚠️ No cookies received from browser!");
         } else {
-            log.info("🍪 Cookies received:");
 
             for (Cookie cookie : cookies) {
-                log.info("   {} = {}", cookie.getName(), cookie.getValue());
 
                 if ("jwt".equals(cookie.getName())) {
                     token = cookie.getValue();
@@ -64,12 +61,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
         else {
-            log.info("🍪 JWT token from cookie: {}", token);
             Claims claims = jwtUtils.parseClaims(token);
-            log.info("📄 Parsed claims: {}", claims);
         }
 
-        log.info("✅ JWT token found, validating...");
 
         try {
             Claims claims = jwtUtils.parseClaims(token);
@@ -81,10 +75,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     ? claims.get("entrepriseId", Integer.class)
                     : null;
 
-            log.info("✅ Token valid!");
-            log.info("   User: {}", email);
-            log.info("   Role: {}", role);
-            log.info("   EntrepriseId: {}", entrepriseId);
 
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(role);
@@ -100,7 +90,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            log.info("🔐 SecurityContext updated successfully!");
 
         } catch (JwtException ex) {
 

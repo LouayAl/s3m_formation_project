@@ -115,12 +115,10 @@ public class SessionFormationService {
        ========================= */
     public SessionFormationResponseDto updateSession(Integer sessionId, UpdateSessionRequest request) {
 
-        log.info("Update request received: {}", request);
 
         SessionFormation existing = repository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-        log.info("Existing session before update: dHeures={}, dJours={}", existing.getDHeures(), existing.getDJours());
 
         if (request.dHeures() != null) {
             existing.setDHeures(request.dHeures());
@@ -138,10 +136,8 @@ public class SessionFormationService {
             existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
         if (request.statut() != null) existing.setStatut(request.statut());
 
-        log.info("Existing session after update: dHeures={}, dJours={}", existing.getDHeures(), existing.getDJours());
 
         SessionFormation saved = repository.save(existing);
-        log.info("Session saved: {}", saved.getIdSession());
 
         return toDto(saved);
     }

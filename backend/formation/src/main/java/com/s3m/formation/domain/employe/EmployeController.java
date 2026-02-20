@@ -25,7 +25,6 @@ public class EmployeController {
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<EmployeResponseDto> getAllEmployes() {
-        log.info("GET /api/employes");
         return employeService.getAllEmployes();
     }
 
@@ -35,7 +34,6 @@ public class EmployeController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
-        log.info("GET /api/employes/{}", id);
         return employeService.getEmployeById(id);
     }
 
@@ -44,7 +42,6 @@ public class EmployeController {
     // =========================
     @GetMapping("/search")
     public List<EmployeResponseDto> search(@RequestParam String keyword) {
-        log.info("GET /api/employes/search?keyword={}", keyword);
         return employeService.searchEmployes(keyword);
     }
 
@@ -55,12 +52,9 @@ public class EmployeController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('ADMIN')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
-        log.info("POST /api/employes");
-        log.info("Payload received: {}", employe);
 
         EmployeResponseDto created = employeService.createEmploye(employe);
 
-        log.info("Employee successfully created with id={}", created.getIdEmploye());
         return created;
     }
 
@@ -70,12 +64,9 @@ public class EmployeController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
-        log.info("PUT /api/employes/{}", id);
-        log.info("Payload received: {}", employe);
 
         EmployeResponseDto updated = employeService.updateEmploye(id, employe);
 
-        log.info("Employee successfully updated with id={}", id);
         return updated;
     }
 
@@ -86,9 +77,7 @@ public class EmployeController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAuthority('ADMIN')")
     public void delete(@PathVariable Integer id) {
-        log.info("DELETE /api/employes/{}", id);
         employeService.deleteEmploye(id);
-        log.info("Employee deleted with id={}", id);
     }
 
     @PostMapping("/import")

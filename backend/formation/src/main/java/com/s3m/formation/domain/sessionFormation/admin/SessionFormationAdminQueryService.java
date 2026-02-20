@@ -34,7 +34,6 @@ public class SessionFormationAdminQueryService {
                 endDate
         );
 
-        System.out.println("ADMIN SESSIONS COUNT = " + sessions.size());
         return repository.adminSearch(
                         statut,
                         formationId,

@@ -71,9 +71,6 @@ public class AuthController {
                 .map(Object::toString)
                 .findFirst()
                 .orElse("USER");
-        System.out.println("JWT Principal email = [" + email + "]");
-        System.out.println("Length = " + email.length());
-        System.out.println("Role = " + role);
 
 
         User user = userService.findByEmail(email);
@@ -81,7 +78,6 @@ public class AuthController {
         if (user == null) {
             return ResponseEntity.status(404).build();
         }
-        System.out.println("----user.email :---- " + user.getEmail());
 
         return ResponseEntity.ok(new LoginResponse(
                 null, // token is no longer returned

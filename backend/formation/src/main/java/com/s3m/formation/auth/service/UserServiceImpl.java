@@ -16,11 +16,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public User findByEmail(String email) {
 
-        System.out.println("🔍 Looking up user with email: [" + email + "]");
 
         String cleanedEmail = email.trim().toLowerCase();
 
-        System.out.println("🧼 Cleaned email: [" + cleanedEmail + "]");
 
         return userRepository.findByEmail(cleanedEmail)
                 .orElse(null);

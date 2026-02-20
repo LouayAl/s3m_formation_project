@@ -1,6 +1,7 @@
 package com.s3m.formation.security;
 
 import com.s3m.formation.security.jwt.JwtUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtUtils jwtUtils;
+
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
 
     public SecurityConfig(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;

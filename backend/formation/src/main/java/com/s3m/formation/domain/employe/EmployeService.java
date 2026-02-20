@@ -63,8 +63,6 @@ public class EmployeService {
     // =========================
 
     public EmployeResponseDto createEmploye(Employe employe) {
-        log.info("=== CREATE EMPLOYE START ===");
-        log.info("Payload received: {}", employe);
 
         if (employe.getEntreprise() == null || employe.getEntreprise().getIdEntreprise() == null) {
             log.error("Entreprise is null in payload");
@@ -90,10 +88,7 @@ public class EmployeService {
         employe.setDepartement(departement);
 
         try {
-            log.info("Saving employee...");
             Employe saved = employeRepository.saveAndFlush(employe);
-            log.info("Employee saved with ID={}", saved.getIdEmploye());
-            log.info("=== CREATE EMPLOYE END SUCCESS ===");
             return toDto(saved);
         } catch (Exception e) {
             log.error("Error while saving employee", e);
@@ -268,8 +263,7 @@ public class EmployeService {
 
             employeRepository.saveAll(toSave);
 
-            System.out.println("Import terminé : " + imported +
-                    " ajoutés, " + skipped + " ignorés.");
+            
 
             return imported;
 
