@@ -1,3 +1,4 @@
+# S3M_Formation_Project/.gitignore
 # Environment variables
 .env
 db/.env
@@ -5,3 +6,13 @@ db/.env
 # Docker volumes (safety)
 pgdata/
 node_modules
+
+# ===============================
+# Database dumps
+# ===============================
+*.sql
+
+*.dump
+
+# dependencies
+/node_modules

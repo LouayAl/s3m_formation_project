@@ -1,7 +1,6 @@
 package com.s3m.formation.security;
 
 import com.s3m.formation.security.jwt.JwtUtils;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,9 +22,6 @@ public class SecurityConfig {
 
     private final JwtUtils jwtUtils;
 
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
-
     public SecurityConfig(JwtUtils jwtUtils) {
         this.jwtUtils = jwtUtils;
     }
@@ -35,69 +31,44 @@ public class SecurityConfig {
         return new JwtAuthenticationFilter(jwtUtils);
     }
 
-
+    // ✅ PRODUCTION SAFE CORS CONFIG
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000" ));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of(
-                "Authorization",
-                "Content-Type",
-                "Accept",
-                "Cookie",         // ✅ allow browser to send cookies
-                "Set-Cookie"      // ✅ allow server to set cookies
+        // IMPORTANT: must match exactly what browser sends
+        config.setAllowedOrigins(List.of("https://formation.ifmia.ma"));
+
+        config.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "DELETE",
+                "OPTIONS"
         ));
+
+        // Allow all headers to prevent preflight rejection
+        config.setAllowedHeaders(List.of("*"));
+
+        // If you use JWT in Authorization header
+        config.setExposedHeaders(List.of("Authorization"));
+
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", config);
+
         return source;
     }
-
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//
-//        http
-//                .cors(cors -> {}) // enable CORS
-//                .csrf(csrf -> csrf.disable()) // disable CSRF since it's a REST API
-//                .sessionManagement(session ->
-//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-//                )
-//                .authorizeHttpRequests(auth -> auth
-//                        // public endpoints
-//                        .requestMatchers(
-//                                "/api/auth/**",
-//                                "/api/formations/**",
-//                                "/api/entreprises/**",
-//                                "/api/employes/**",
-//                                "/api/fiches/**",
-//                                "/api/test/**",
-//                                "/api/sessions/**",
-//                                "/api/departements/**",
-//                                "/api/formateurs/**",
-//                                "/actuator/**"
-//                        ).permitAll()
-//                        // all other endpoints require authentication
-//                        .anyRequest().authenticated()
-//                )
-//                .addFilterBefore(
-//                        jwtAuthenticationFilter(),
-//                        UsernamePasswordAuthenticationFilter.class
-//                );
-//
-//        return http.build();
-//    }
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> {})
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
 
                 .sessionManagement(session ->
@@ -106,14 +77,13 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
 
-                        // ✅ Only login/register is public
+                        // Public endpoints
                         .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
-                        .requestMatchers("/api/auth/me").authenticated()
 
-                        // ✅ React preflight requests
+                        // Allow preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // 🔒 Everything else needs JWT
+                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
 
@@ -124,7 +94,6 @@ public class SecurityConfig {
 
         return http.build();
     }
-
 
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {

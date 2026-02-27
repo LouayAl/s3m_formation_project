@@ -1,3 +1,4 @@
+# backend/formation/.gitignore
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
@@ -31,3 +32,38 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ===============================
+# Logs
+# ===============================
+logs/
+*.log
+
+# ===============================
+# Environment variables
+# ===============================
+.env
+.env.*
+application-prod.yaml
+application.yaml
+
+# ===============================
+# OS files
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# Database dumps
+# ===============================
+*.sql
+
+# ===============================
+# Maven
+# ===============================
+dependency-reduced-pom.xml
+
+# ===============================
+# Systemd / deployment
+# ===============================
+*.service
