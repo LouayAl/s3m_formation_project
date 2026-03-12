@@ -10,14 +10,27 @@ import java.util.List;
 
 public interface ClientPopulationKpiRepository extends JpaRepository<Employe, Integer> {
 
-    @Query("""
-        SELECT COALESCE(e.csp, 'Non renseigné') AS label, COUNT(e) AS count
-        FROM Employe e
-        WHERE e.entreprise.idEntreprise = :clientId
+    /**
+     * CSP breakdown — native query, uses = ANY(:years) for PostgreSQL array binding.
+     */
+    @Query(value = """
+        SELECT COALESCE(e.csp, 'Non renseigné') AS label, COUNT(DISTINCT e.id_employe) AS count
+        FROM participation p
+        JOIN employe e        ON p.id_employe = e.id_employe
+        JOIN session_formation s ON p.id_session = s.id_session
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY COALESCE(e.csp, 'Non renseigné')
-    """)
-    List<RepartitionItemProjection> countByCsp(@Param("clientId") Integer clientId);
+    """, nativeQuery = true)
+    List<RepartitionItemProjection> countByCsp(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 
+    /**
+     * Fonction / TypeContrat / Genre breakdowns query the Employe table directly
+     * (no date filter — they are workforce snapshots, not tied to training sessions).
+     */
     @Query("""
         SELECT COALESCE(e.fonction, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
@@ -42,54 +55,87 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
     """)
     List<RepartitionItemProjection> countByGenre(@Param("clientId") Integer clientId);
 
-    @Query("""
+    /**
+     * Gender breakdown by department — native query.
+     */
+    @Query(value = """
         SELECT
-            COALESCE(d.nom, 'Non défini') AS departement,
-            COALESCE(e.f_h, 'N') AS genre,
-            COUNT(p.idParticipation) AS nombre
-        FROM Participation p
-        JOIN p.employe e
-        LEFT JOIN e.departement d
+            COALESCE(d.nom, 'Non défini')  AS departement,
+            COALESCE(e.f_h, 'N')           AS genre,
+            COUNT(p.id_participation)      AS nombre
+        FROM participation p
+        JOIN employe e           ON p.id_employe  = e.id_employe
+        LEFT JOIN departement d  ON e.id_departement = d.id_departement
+        JOIN session_formation s ON p.id_session  = s.id_session
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY d.nom, e.f_h
         ORDER BY d.nom, e.f_h
-    """)
-    List<ClientGenderByDepartmentKpiProjection> getGenderByDepartmentForAllEntreprises();
+    """, nativeQuery = true)
+    List<ClientGenderByDepartmentKpiProjection> getGenderByDepartmentForClient(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 
-    @Query("""
+    /**
+     * Training hours by gender — native query.
+     */
+    @Query(value = """
         SELECT
-            COALESCE(e.f_h, 'N') AS label,
-            SUM(s.dHeures) AS totalHeures,
-            COUNT(DISTINCT e.idEmploye) AS nombreEmployes
-        FROM Participation p
-        JOIN p.employe e
-        JOIN p.session s
+            COALESCE(e.f_h, 'N')            AS label,
+            SUM(s.d_heures)                 AS totalHeures,
+            COUNT(DISTINCT e.id_employe)    AS nombreEmployes
+        FROM participation p
+        JOIN employe e           ON p.id_employe = e.id_employe
+        JOIN session_formation s ON p.id_session = s.id_session
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY e.f_h
-    """)
-    List<GenderHoursKpiProjection> getTrainingHoursByGender();
+    """, nativeQuery = true)
+    List<GenderHoursKpiProjection> getTrainingHoursByGender(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 
-    @Query("""
+    /**
+     * Training hours by CSP — native query.
+     */
+    @Query(value = """
         SELECT
             CASE
                 WHEN e.csp IS NULL OR e.csp = '' OR e.csp = '#REF!' THEN 'Non défini'
                 ELSE e.csp
-            END AS csp,
-            SUM(s.dHeures) AS totalHeures,
-            COUNT(DISTINCT e.idEmploye) AS nombreEmployes
-        FROM Participation p
-        JOIN p.employe e
-        JOIN p.session s
+            END                             AS csp,
+            SUM(s.d_heures)                 AS totalHeures,
+            COUNT(DISTINCT e.id_employe)    AS nombreEmployes
+        FROM participation p
+        JOIN employe e           ON p.id_employe = e.id_employe
+        JOIN session_formation s ON p.id_session = s.id_session
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY
             CASE
                 WHEN e.csp IS NULL OR e.csp = '' OR e.csp = '#REF!' THEN 'Non défini'
                 ELSE e.csp
             END
-    """)
-    List<CspHoursKpiProjection> getTrainingHoursByCsp();
+    """, nativeQuery = true)
+    List<CspHoursKpiProjection> getTrainingHoursByCsp(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 
-    @Query("""
-        SELECT COUNT(DISTINCT p.employe.idEmploye) AS totalParticipants
-        FROM Participation p
-    """)
-    TotalParticipantsKpiProjection getTotalParticipants();
-
+    /**
+     * Total distinct participants — native query.
+     */
+    @Query(value = """
+        SELECT COUNT(DISTINCT p.id_employe) AS totalParticipants
+        FROM participation p
+        JOIN session_formation s ON p.id_session = s.id_session
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+    """, nativeQuery = true)
+    TotalParticipantsKpiProjection getTotalParticipants(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 }

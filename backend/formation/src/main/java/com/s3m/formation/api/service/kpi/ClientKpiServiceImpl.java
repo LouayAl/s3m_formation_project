@@ -27,18 +27,16 @@ public class ClientKpiServiceImpl implements ClientKpiService {
     private final ClientFormationKpiRepository formationRepo;
     private final TotalSessionsKpiRepository totalSessionsRepo;
 
-
-
     @Override
-    public ClientKpiResponse getClientKpis(Integer clientId) {
+    public ClientKpiResponse getClientKpis(Integer clientId, Integer[] years) {
 
-        // 3️⃣ Financier
-        ClientFinancierKpiProjection financierProjection = financierRepo.computeFinancier(clientId);
+        Integer[] yearsArray = resolveYears(clientId, years);
+
+        ClientFinancierKpiProjection financierProjection = financierRepo.computeFinancier(clientId, yearsArray);
         ClientFinancierKpiDto financier = mapFinancier(financierProjection);
 
-        // 3️⃣a Financier par type de remboursement
         List<ClientFinancierByRemboursementProjection> remboursementProj =
-                financierRepo.computeFinancierByRemboursement();
+                financierRepo.computeFinancierByRemboursement(clientId, yearsArray);
         List<ClientFinancierByRemboursementDto> remboursementByType = remboursementProj.stream()
                 .map(p -> new ClientFinancierByRemboursementDto(
                         p.getRemboursement(),
@@ -46,43 +44,34 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 ))
                 .toList();
 
-        // 5️⃣ Population
-        List<RepartitionItemProjection> cspProj = populationRepo.countByCsp(clientId);
-        List<RepartitionItemProjection> fonctionProj = populationRepo.countByFonction(clientId);
+        List<RepartitionItemProjection> cspProj         = populationRepo.countByCsp(clientId, yearsArray);
+        List<RepartitionItemProjection> fonctionProj    = populationRepo.countByFonction(clientId);
         List<RepartitionItemProjection> typeContratProj = populationRepo.countByTypeContrat(clientId);
-        List<RepartitionItemProjection> genreProj = populationRepo.countByGenre(clientId);
+        List<RepartitionItemProjection> genreProj       = populationRepo.countByGenre(clientId);
 
-        List<ClientGenderByDepartmentKpiProjection> genderDeptProj = populationRepo.getGenderByDepartmentForAllEntreprises();
-        List<GenderHoursKpiProjection> genderHoursProj = populationRepo.getTrainingHoursByGender();
-        List<CspHoursKpiProjection> cspHoursProj = populationRepo.getTrainingHoursByCsp();
+        List<ClientGenderByDepartmentKpiProjection> genderDeptProj =
+                populationRepo.getGenderByDepartmentForClient(clientId, yearsArray);
 
-        // total participants
-        TotalParticipantsKpiProjection participantsProj = populationRepo.getTotalParticipants();
+        List<GenderHoursKpiProjection> genderHoursProj =
+                populationRepo.getTrainingHoursByGender(clientId, yearsArray);
+
+        List<CspHoursKpiProjection> cspHoursProj =
+                populationRepo.getTrainingHoursByCsp(clientId, yearsArray);
+
+        TotalParticipantsKpiProjection participantsProj =
+                populationRepo.getTotalParticipants(clientId, yearsArray);
         Long totalParticipants = participantsProj != null ? participantsProj.getTotalParticipants() : 0L;
 
-
         List<EmployeGenderByDepartmentKpiDto> genderByDepartment = genderDeptProj.stream()
-                .map(p -> new EmployeGenderByDepartmentKpiDto(
-                        p.getDepartement(),
-                        p.getGenre(),
-                        p.getNombre()
-                ))
+                .map(p -> new EmployeGenderByDepartmentKpiDto(p.getDepartement(), p.getGenre(), p.getNombre()))
                 .toList();
 
         List<GenderHoursKpiDto> genderHours = genderHoursProj.stream()
-                .map(p -> new GenderHoursKpiDto(
-                        p.getLabel(),
-                        p.getTotalHeures(),
-                        p.getNombreEmployes()
-                ))
+                .map(p -> new GenderHoursKpiDto(p.getLabel(), p.getTotalHeures(), p.getNombreEmployes()))
                 .toList();
 
         List<CspHoursKpiDto> cspHours = cspHoursProj.stream()
-                .map(p -> new CspHoursKpiDto(
-                        p.getCsp(),
-                        p.getTotalHeures(),
-                        p.getNombreEmployes()
-                ))
+                .map(p -> new CspHoursKpiDto(p.getCsp(), p.getTotalHeures(), p.getNombreEmployes()))
                 .toList();
 
         ClientPopulationKpiDto population = new ClientPopulationKpiDto(
@@ -96,24 +85,26 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 totalParticipants
         );
 
-
-        // 7️⃣ Other KPIs
-        List<ClientParticipantsByDepartmentKpiProjection> participantsDeptProj = participantsDeptRepo.findByClientId(clientId);
-        List<ClientHoursByDepartmentKpiProjection> hoursDeptProj = hoursDeptRepo.findByClientId(clientId);
-        List<ClientHoursByFournisseurKpiProjection> hoursFournisseurProj = hoursFournisseurRepo.findByClientId(clientId);
-        List<ClientHoursByFamilleFormationKpiProjection> hoursFamilleProj = hoursFamilleRepo.findByClientId(clientId);
+        List<ClientParticipantsByDepartmentKpiProjection> participantsDeptProj =
+                participantsDeptRepo.findByClientIdAndYears(clientId, yearsArray);
+        List<ClientHoursByDepartmentKpiProjection> hoursDeptProj =
+                hoursDeptRepo.findByClientIdAndYears(clientId, yearsArray);
+        List<ClientHoursByFournisseurKpiProjection> hoursFournisseurProj =
+                hoursFournisseurRepo.findByClientIdAndYears(clientId, yearsArray);
+        List<ClientHoursByFamilleFormationKpiProjection> hoursFamilleProj =
+                hoursFamilleRepo.findByClientIdAndYears(clientId, yearsArray);
 
         List<ClientParticipantsByDepartmentKpiDto> participantsDept = mapParticipantsByDepartment(participantsDeptProj);
-        List<ClientHoursByDepartmentKpiDto> hoursDept = mapHoursByDepartment(hoursDeptProj);
-        List<ClientHoursByFournisseurKpiDto> hoursFournisseur = mapHoursByFournisseur(hoursFournisseurProj);
-        List<ClientHoursByFamilleFormationKpiDto> hoursFamille = mapHoursByFamilleFormation(hoursFamilleProj);
+        List<ClientHoursByDepartmentKpiDto>        hoursDept        = mapHoursByDepartment(hoursDeptProj);
+        List<ClientHoursByFournisseurKpiDto>        hoursFournisseur = mapHoursByFournisseur(hoursFournisseurProj);
+        List<ClientHoursByFamilleFormationKpiDto>   hoursFamille     = mapHoursByFamilleFormation(hoursFamilleProj);
 
-        // Total Formation Hours
-        TotalFormationHoursProjection totalHoursProj = formationRepo.getTotalFormationHours();
+        TotalFormationHoursProjection totalHoursProj = formationRepo.getTotalFormationHours(clientId, yearsArray);
         BigDecimal totalFormationHours = totalHoursProj != null ? totalHoursProj.getTotalHeures() : BigDecimal.ZERO;
 
-        // Total sessions
-        Long totalSessions = totalSessionsRepo.getTotalSessions().getTotalSessions();
+        Long totalSessions = totalSessionsRepo
+                .getTotalSessionsByClientAndYears(clientId, yearsArray)
+                .getTotalSessions();
 
         return new ClientKpiResponse(
                 financier,
@@ -122,11 +113,19 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 hoursDept,
                 hoursFournisseur,
                 hoursFamille,
-                remboursementByType, // <-- new field for pie chart
+                remboursementByType,
                 totalFormationHours,
                 totalSessions
         );
     }
+
+    private Integer[] resolveYears(Integer clientId, Integer[] years) {
+        if (years != null && years.length > 0) return years;
+        List<Integer> allYears = formationRepo.findDistinctYearsByClientId(clientId);
+        return allYears.toArray(new Integer[0]);
+    }
+
+    // ─── Mapping helpers ─────────────────────────────────────────────────────────
 
     private List<RepartitionKpiItemDto> mapRepartition(List<RepartitionItemProjection> items) {
         return items.stream()
@@ -137,25 +136,17 @@ public class ClientKpiServiceImpl implements ClientKpiService {
     private ClientFinancierKpiDto mapFinancier(ClientFinancierKpiProjection p) {
         if (p == null) {
             return new ClientFinancierKpiDto(
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO
-            );
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
         }
-
         BigDecimal coutMoyenParJour = p.getTotalJours().compareTo(BigDecimal.ZERO) > 0
                 ? p.getCoutTotal().divide(p.getTotalJours(), 2, BigDecimal.ROUND_HALF_UP)
                 : BigDecimal.ZERO;
-
         BigDecimal coutMoyenParParticipant = p.getTotalParticipants() > 0
                 ? p.getCoutTotal().divide(BigDecimal.valueOf(p.getTotalParticipants()), 2, BigDecimal.ROUND_HALF_UP)
                 : BigDecimal.ZERO;
-
         return new ClientFinancierKpiDto(
-                p.getCoutTotal(),
-                coutMoyenParJour,
-                coutMoyenParParticipant,
-                p.getCoutRembourse(),
-                p.getCoutNonRembourse()
-        );
+                p.getCoutTotal(), coutMoyenParJour, coutMoyenParParticipant,
+                p.getCoutRembourse(), p.getCoutNonRembourse());
     }
 
     private List<ClientParticipantsByDepartmentKpiDto> mapParticipantsByDepartment(
@@ -187,96 +178,88 @@ public class ClientKpiServiceImpl implements ClientKpiService {
     }
 
     @Override
+    public List<Integer> getAvailableYears(Integer clientId) {
+        return formationRepo.findDistinctYearsByClientId(clientId);
+    }
+
+    // ─── Growth KPI ──────────────────────────────────────────────────────────────
+
+    @Override
     public TotalGrowthKpiDto getTotalGrowthKpi(
             Integer entrepriseId,
             String period,
-            String month
+            String month,
+            Integer[] years
     ) {
-
         List<Object[]> rawData;
+        boolean hasYears = years != null && years.length > 0;
 
         switch (period.toLowerCase()) {
 
             case "daily" -> {
-
-                // ✅ Daily requires a month parameter
                 if (month == null || month.isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Month is required for daily period (format: YYYY-MM)"
-                    );
+                    throw new IllegalArgumentException("Month is required for daily period (format: YYYY-MM)");
                 }
-
-                rawData = formationRepo.getTotalGrowthByDayForEntreprise(
-                        entrepriseId,
-                        month
-                );
+                rawData = formationRepo.getTotalGrowthByDayForEntreprise(entrepriseId, month);
             }
 
             case "yearly" -> {
-                rawData = formationRepo.getTotalGrowthByYearForEntreprise(entrepriseId);
+                if (hasYears) {
+                    rawData = formationRepo.getTotalGrowthByYearForEntrepriseAndYears(entrepriseId, years);
+                } else {
+                    rawData = formationRepo.getTotalGrowthByYearForEntreprise(entrepriseId);
+                }
             }
 
             case "monthly" -> {
-                rawData = formationRepo.getTotalGrowthByMonthForEntreprise(entrepriseId);
+                if (!hasYears) {
+                    // No filter — show all months across all time
+                    rawData = formationRepo.getTotalGrowthByMonthForEntreprise(entrepriseId);
+                } else if (years.length == 1) {
+                    // Single year — show "Jan YYYY", "Feb YYYY", ...
+                    rawData = formationRepo.getTotalGrowthByMonthForEntrepriseAndYear(entrepriseId, years[0]);
+                } else {
+                    // Multiple years — show "Jan", "Feb", ... summed across selected years
+                    rawData = formationRepo.getTotalGrowthByMonthForEntrepriseAndYears(entrepriseId, years);
+                }
             }
 
             default -> throw new IllegalArgumentException(
-                    "Invalid period: " + period + ". Allowed values: daily, monthly, yearly"
-            );
+                    "Invalid period: " + period + ". Allowed: daily, monthly, yearly");
         }
 
-        // ✅ Prepare chart structures
-        List<String> categories = new ArrayList<>();
-        List<Double> topData = new ArrayList<>();
-        List<Double> autresData = new ArrayList<>();
+        if (rawData == null || rawData.isEmpty()) {
+            TotalGrowthKpiDto empty = new TotalGrowthKpiDto();
+            empty.setCategories(List.of());
+            empty.setSeries(List.of());
+            empty.setTopFormationsByMonth(Map.of());
+            return empty;
+        }
 
-        // ✅ Works for day/month/year
+        List<String> categories = new ArrayList<>();
+        List<Double>  topData   = new ArrayList<>();
+        List<Double>  autresData = new ArrayList<>();
         Map<String, String> topFormationsByPeriod = new LinkedHashMap<>();
 
-        // ✅ Handle empty result
-        if (rawData == null || rawData.isEmpty()) {
-            TotalGrowthKpiDto emptyDto = new TotalGrowthKpiDto();
-            emptyDto.setCategories(List.of());
-            emptyDto.setSeries(List.of());
-            emptyDto.setTopFormationsByMonth(Map.of());
-            return emptyDto;
-        }
-
-        // ✅ Fill DTO from query rows
         for (Object[] row : rawData) {
-
-            String periodLabel = String.valueOf(row[0]);  // day/month/year label
+            String periodLabel  = String.valueOf(row[0]);
             String topFormation = String.valueOf(row[1]);
-
-            Double topHours = row[2] != null
-                    ? ((Number) row[2]).doubleValue()
-                    : 0.0;
-
-            Double autresHours = row[3] != null
-                    ? ((Number) row[3]).doubleValue()
-                    : 0.0;
+            Double topHours     = row[2] != null ? ((Number) row[2]).doubleValue() : 0.0;
+            Double autresHours  = row[3] != null ? ((Number) row[3]).doubleValue() : 0.0;
 
             categories.add(periodLabel);
             topData.add(topHours);
             autresData.add(autresHours);
-
             topFormationsByPeriod.put(periodLabel, topFormation);
         }
 
-        // ✅ Build final DTO
         TotalGrowthKpiDto dto = new TotalGrowthKpiDto();
         dto.setCategories(categories);
-
         dto.setSeries(List.of(
                 new TotalGrowthKpiDto.SeriesData("Top Formation", topData),
                 new TotalGrowthKpiDto.SeriesData("Autres", autresData)
         ));
-
-        // ⚠️ Still named "ByMonth" in DTO, but contains day/month/year
         dto.setTopFormationsByMonth(topFormationsByPeriod);
-
         return dto;
     }
-
-
 }

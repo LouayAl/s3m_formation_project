@@ -1,7 +1,6 @@
 package com.s3m.formation.api.controller;
 
 import com.s3m.formation.api.kpi.client.dto.ClientKpiResponse;
-import com.s3m.formation.api.kpi.client.dto.TotalGrowthByMonthDto;
 import com.s3m.formation.api.kpi.client.dto.TotalGrowthKpiDto;
 import com.s3m.formation.api.service.kpi.ClientKpiService;
 import lombok.RequiredArgsConstructor;
@@ -18,21 +17,32 @@ public class ClientKpiController {
     private final ClientKpiService clientKpiService;
 
     @GetMapping
-    public ResponseEntity<ClientKpiResponse> getClientKpis(@PathVariable Integer clientId) {
-        ClientKpiResponse response = clientKpiService.getClientKpis(clientId);
-        if (response == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ClientKpiResponse> getClientKpis(
+            @PathVariable Integer clientId,
+            @RequestParam(required = false) List<Integer> years
+    ) {
+        Integer[] yearsArray = (years == null || years.isEmpty())
+                ? new Integer[0]
+                : years.toArray(new Integer[0]);
+        ClientKpiResponse response = clientKpiService.getClientKpis(clientId, yearsArray);
+        return response != null ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/years")
+    public ResponseEntity<List<Integer>> getAvailableYears(@PathVariable Integer clientId) {
+        return ResponseEntity.ok(clientKpiService.getAvailableYears(clientId));
     }
 
     @GetMapping("/total-growth")
     public TotalGrowthKpiDto getTotalGrowth(
             @PathVariable Integer clientId,
             @RequestParam(defaultValue = "monthly") String period,
-            @RequestParam(required = false) String month
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) List<Integer> years   // ← added
     ) {
-        return clientKpiService.getTotalGrowthKpi(clientId, period, month);
+        Integer[] yearsArray = (years == null || years.isEmpty())
+                ? new Integer[0]
+                : years.toArray(new Integer[0]);
+        return clientKpiService.getTotalGrowthKpi(clientId, period, month, yearsArray);
     }
-
 }

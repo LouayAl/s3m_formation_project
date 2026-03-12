@@ -3,6 +3,7 @@ package com.s3m.formation.domain.employe;
 import com.s3m.formation.api.dto.EmployeResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -20,12 +21,29 @@ public class EmployeController {
     private final EmployeService employeService;
 
     // =========================
-    // GET ALL
+    // GET ALL (kept for ParticipantsModal and other internal uses)
     // =========================
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
     public List<EmployeResponseDto> getAllEmployes() {
         return employeService.getAllEmployes();
+    }
+
+    // =========================
+    // GET PAGINATED
+    // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
+    // =========================
+    @GetMapping("/paginated")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    public Page<EmployeResponseDto> getEmployesPaginated(
+            @RequestParam(defaultValue = "0")          int page,
+            @RequestParam(defaultValue = "20")         int size,
+            @RequestParam(required = false)            String search,
+            @RequestParam(required = false)            Integer entrepriseId,
+            @RequestParam(defaultValue = "idEmploye")  String sortBy,
+            @RequestParam(defaultValue = "desc")       String sortDir
+    ) {
+        return employeService.getEmployesPaginated(entrepriseId, search, page, size, sortBy, sortDir);
     }
 
     // =========================
@@ -52,10 +70,7 @@ public class EmployeController {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAuthority('ADMIN')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
-
-        EmployeResponseDto created = employeService.createEmploye(employe);
-
-        return created;
+        return employeService.createEmploye(employe);
     }
 
     // =========================
@@ -64,10 +79,7 @@ public class EmployeController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ADMIN')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
-
-        EmployeResponseDto updated = employeService.updateEmploye(id, employe);
-
-        return updated;
+        return employeService.updateEmploye(id, employe);
     }
 
     // =========================
@@ -80,13 +92,13 @@ public class EmployeController {
         employeService.deleteEmploye(id);
     }
 
+    // =========================
+    // IMPORT EXCEL
+    // =========================
     @PostMapping("/import")
     @PreAuthorize("hasAuthority('ADMIN')")
     public String importEmployesExcel(@RequestParam("file") MultipartFile file) {
-
         int imported = employeService.importFromExcel(file);
-
         return imported + " employés importés avec succès.";
     }
-
 }

@@ -26,5 +26,21 @@ public interface ClientHoursByDepartmentKpiRepository extends JpaRepository<Sess
             @Param("clientId") Integer clientId
     );
 
+    @Query(value = """
+        SELECT d.nom AS departement,
+               SUM(s.d_heures) AS totalHeures
+        FROM session_formation s
+        JOIN participation p ON s.id_session = p.id_session
+        JOIN employe e ON p.id_employe = e.id_employe
+        JOIN departement d ON e.id_departement = d.id_departement
+        WHERE s.id_entreprise = :clientId
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+        GROUP BY d.nom
+        ORDER BY totalHeures DESC
+    """, nativeQuery = true)
+    List<ClientHoursByDepartmentKpiProjection> findByClientIdAndYears(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 
 }

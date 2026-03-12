@@ -1,5 +1,8 @@
 package com.s3m.formation.domain.employe;
 
+import com.s3m.formation.api.dto.EmployeResponseDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -8,14 +11,13 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EmployeRepository extends JpaRepository<Employe, Integer> {
+
     List<Employe> findByEntreprise_IdEntreprise(Integer idEntreprise);
     boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
-    // Optional: find by email (unique)
     Optional<Employe> findByEmail(String email);
-
     boolean existsByEmail(String email);
+    boolean existsByMatricule(String matricule);
 
-    // Search by keyword in nom, prenom, email, matricule
     @Query("""
         SELECT e FROM Employe e
         WHERE LOWER(e.nom) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -29,7 +31,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
         SELECT e FROM Employe e
         WHERE (:departementId IS NULL OR e.departement.id = :departementId)
           AND (:fonction IS NULL OR e.fonction = :fonction)
-          AND (:entrepriseId IS NULL OR e.entreprise.id = :entrepriseId)
+          AND (:entrepriseId IS NULL OR e.entreprise.idEntreprise = :entrepriseId)
         ORDER BY e.nom, e.prenom
     """)
     List<Employe> filter(
@@ -38,6 +40,22 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
             @Param("entrepriseId") Integer entrepriseId
     );
 
-    boolean existsByMatricule(String matricule);
+    // ── Paginated search with optional entreprise scoping ──────────────────
+    @Query("""
+        SELECT e FROM Employe e
+        WHERE (:entrepriseId IS NULL OR e.entreprise.idEntreprise = :entrepriseId)
+          AND (
+            :search IS NULL OR :search = ''
+            OR LOWER(e.nom)       LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(e.prenom)    LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(e.cin)       LIKE LOWER(CONCAT('%', :search, '%'))
+          )
 
+    """)
+    Page<Employe> findPaginated(
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

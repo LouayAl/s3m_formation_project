@@ -22,5 +22,19 @@ public interface ClientParticipantsByDepartmentKpiRepository extends JpaReposito
             @Param("clientId") Integer clientId
     );
 
-
+    @Query(value = """
+    SELECT d.nom AS departement, COUNT(*) AS nbParticipants
+    FROM participation p
+    JOIN employe e ON p.id_employe = e.id_employe
+    JOIN departement d ON e.id_departement = d.id_departement
+    JOIN session_formation s ON p.id_session = s.id_session
+    WHERE e.id_entreprise = :clientId
+      AND EXTRACT(YEAR FROM s.date_debut) IN (:years)
+    GROUP BY d.nom
+    ORDER BY nbParticipants DESC
+""", nativeQuery = true)
+    List<ClientParticipantsByDepartmentKpiProjection> findByClientIdAndYears(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 }
