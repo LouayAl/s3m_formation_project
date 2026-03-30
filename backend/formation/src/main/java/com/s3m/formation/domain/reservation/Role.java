@@ -1,5 +1,5 @@
 package com.s3m.formation.domain.reservation;
 
 public enum Role {
-    ADMIN, CLIENT
+    ADMIN, CLIENT, MANAGER, EQUIPMENT_MANAGER
 }

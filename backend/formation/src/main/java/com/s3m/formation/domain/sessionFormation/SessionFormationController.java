@@ -20,7 +20,7 @@ public class SessionFormationController {
        READ
        ========================= */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public List<SessionFormationResponseDto> getAllSessions() {
         return service.getAllSessions();
     }
@@ -32,7 +32,7 @@ public class SessionFormationController {
     }
 
     @GetMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public SessionFormationResponseDto getSession(@PathVariable Integer sessionId) {
         return service.getSession(sessionId);
     }

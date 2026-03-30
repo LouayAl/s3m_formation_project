@@ -17,7 +17,7 @@ public class FormationController {
     private final FormationService formationService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public List<FormationResponseDto> getAllFormations() {
         return formationService.getAllFormations();
     }

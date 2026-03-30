@@ -24,7 +24,7 @@ public class EmployeController {
     // GET ALL (kept for ParticipantsModal and other internal uses)
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public List<EmployeResponseDto> getAllEmployes() {
         return employeService.getAllEmployes();
     }
@@ -50,7 +50,7 @@ public class EmployeController {
     // GET BY ID
     // =========================
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
         return employeService.getEmployeById(id);
     }
