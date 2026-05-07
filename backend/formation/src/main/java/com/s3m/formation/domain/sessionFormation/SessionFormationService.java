@@ -309,7 +309,7 @@ public class SessionFormationService {
 
         // Check if any granted authority equals "ADMIN" (exact match with DB role)
         for (GrantedAuthority authority : auth.getAuthorities()) {
-            if ("ADMIN".equals(authority.getAuthority())) {
+            if ("ADMIN".equals(authority.getAuthority()) || "EQUIPMENT_MANAGER".equals(authority.getAuthority())) {
                 return true;
             }
         }

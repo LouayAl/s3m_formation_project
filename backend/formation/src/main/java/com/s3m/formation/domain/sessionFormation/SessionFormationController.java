@@ -42,7 +42,7 @@ public class SessionFormationController {
        ========================= */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public SessionFormationResponseDto createSession(@RequestBody CreateSessionRequest request) {
         return service.toDto(service.createSession(request));
     }
@@ -51,7 +51,7 @@ public class SessionFormationController {
        UPDATE
        ========================= */
     @PutMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public SessionFormationResponseDto updateSession(@PathVariable Integer sessionId,
                                                      @RequestBody UpdateSessionRequest request) {
         return service.updateSession(sessionId, request);
@@ -61,7 +61,7 @@ public class SessionFormationController {
        DELETE
        ========================= */
     @DeleteMapping("/{sessionId}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public void deleteSession(@PathVariable Integer sessionId) {
         service.deleteSession(sessionId);
     }
@@ -86,7 +86,7 @@ public class SessionFormationController {
 
     @PutMapping("/{sessionId}/participants")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public void updateParticipants(@PathVariable Integer sessionId,
                                    @RequestBody List<Integer> participantIds) {
         service.updateParticipants(sessionId, participantIds);

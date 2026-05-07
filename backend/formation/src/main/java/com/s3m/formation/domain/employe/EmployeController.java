@@ -34,7 +34,7 @@ public class EmployeController {
     // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public Page<EmployeResponseDto> getEmployesPaginated(
             @RequestParam(defaultValue = "0")          int page,
             @RequestParam(defaultValue = "20")         int size,
@@ -68,7 +68,7 @@ public class EmployeController {
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
         return employeService.createEmploye(employe);
     }
@@ -77,7 +77,7 @@ public class EmployeController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
         return employeService.updateEmploye(id, employe);
     }
@@ -87,7 +87,7 @@ public class EmployeController {
     // =========================
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public void delete(@PathVariable Integer id) {
         employeService.deleteEmploye(id);
     }
@@ -96,7 +96,7 @@ public class EmployeController {
     // IMPORT EXCEL
     // =========================
     @PostMapping("/import")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public String importEmployesExcel(@RequestParam("file") MultipartFile file) {
         int imported = employeService.importFromExcel(file);
         return imported + " employés importés avec succès.";
