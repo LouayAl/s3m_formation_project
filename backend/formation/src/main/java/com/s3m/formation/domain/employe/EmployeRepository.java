@@ -58,4 +58,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
             @Param("search") String search,
             Pageable pageable
     );
+
+    // Used by EMService.getDashboardKpis()
+    long countByEntreprise_IdEntreprise(Integer idEntreprise);
 }

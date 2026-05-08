@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.sessionFormation;
 
 import com.s3m.formation.domain.reservation.DemandeReservation;
+import com.s3m.formation.domain.formation.Formation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -102,4 +103,16 @@ public interface SessionFormationRepository
     boolean existsByFormation_IdFormation(Integer idFormation);
     boolean existsByReferenceSession(String referenceSession);
     List<SessionFormation> findByStatut(SessionFormationStatut statut);
+    List<SessionFormation> findByFormateur_IdFormateur(Integer idFormateur);
+
+    List<SessionFormation> findAllByEntreprise_IdEntreprise(Integer entrepriseId);
+
+    @Query("""
+        SELECT DISTINCT f
+        FROM SessionFormation s
+        JOIN s.formation f
+        WHERE s.entreprise.idEntreprise = :entrepriseId
+        ORDER BY f.module
+    """)
+    List<Formation> findDistinctFormationsByEntrepriseId(@Param("entrepriseId") Integer entrepriseId);
 }

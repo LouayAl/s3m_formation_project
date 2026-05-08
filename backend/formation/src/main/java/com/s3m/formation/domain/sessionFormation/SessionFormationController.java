@@ -20,7 +20,7 @@ public class SessionFormationController {
        READ
        ========================= */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public List<SessionFormationResponseDto> getAllSessions() {
         return service.getAllSessions();
     }
@@ -32,7 +32,7 @@ public class SessionFormationController {
     }
 
     @GetMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public SessionFormationResponseDto getSession(@PathVariable Integer sessionId) {
         return service.getSession(sessionId);
     }
@@ -51,7 +51,7 @@ public class SessionFormationController {
        UPDATE
        ========================= */
     @PutMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public SessionFormationResponseDto updateSession(@PathVariable Integer sessionId,
                                                      @RequestBody UpdateSessionRequest request) {
         return service.updateSession(sessionId, request);
@@ -86,7 +86,7 @@ public class SessionFormationController {
 
     @PutMapping("/{sessionId}/participants")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public void updateParticipants(@PathVariable Integer sessionId,
                                    @RequestBody List<Integer> participantIds) {
         service.updateParticipants(sessionId, participantIds);

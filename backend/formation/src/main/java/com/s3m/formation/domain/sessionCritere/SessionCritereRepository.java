@@ -11,4 +11,6 @@ public interface SessionCritereRepository extends JpaRepository<SessionCritere, 
     );
 
     void deleteBySession_IdSessionAndJour(Integer idSession, Integer jour);
+
+    void deleteBySession_IdSession(Integer idSession);
 }

@@ -10,4 +10,6 @@ public interface FormateurRepository
 
     List<Formateur> findByActifTrue();
     List<Formateur> findByEntreprise_IdEntreprise(Integer entrepriseId);
+    Optional<Formateur> findByEmail(String email);
+
 }

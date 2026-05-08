@@ -24,7 +24,7 @@ public class EmployeController {
     // GET ALL (kept for ParticipantsModal and other internal uses)
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public List<EmployeResponseDto> getAllEmployes() {
         return employeService.getAllEmployes();
     }
@@ -34,7 +34,7 @@ public class EmployeController {
     // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public Page<EmployeResponseDto> getEmployesPaginated(
             @RequestParam(defaultValue = "0")          int page,
             @RequestParam(defaultValue = "20")         int size,
@@ -50,7 +50,7 @@ public class EmployeController {
     // GET BY ID
     // =========================
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
         return employeService.getEmployeById(id);
     }
@@ -68,7 +68,7 @@ public class EmployeController {
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
         return employeService.createEmploye(employe);
     }
@@ -77,7 +77,7 @@ public class EmployeController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
         return employeService.updateEmploye(id, employe);
     }
@@ -87,7 +87,7 @@ public class EmployeController {
     // =========================
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public void delete(@PathVariable Integer id) {
         employeService.deleteEmploye(id);
     }

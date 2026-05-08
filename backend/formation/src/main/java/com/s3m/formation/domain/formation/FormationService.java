@@ -1,11 +1,15 @@
 package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.api.dto.FormationResponseDto;
+import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,6 +24,7 @@ import java.util.*;
 public class FormationService {
 
     private final FormationRepository formationRepository;
+    private final SessionFormationRepository sessionFormationRepository;
 
     /* =========================
        READ
@@ -27,6 +32,22 @@ public class FormationService {
 
     public List<FormationResponseDto> getAllFormations() {
         return formationRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    public List<FormationResponseDto> getVisibleFormationsForCurrentUser() {
+        if (!mustScopeFormationsToEntreprise()) {
+            return getAllFormations();
+        }
+
+        Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
+        if (entrepriseId == null) {
+            return List.of();
+        }
+
+        return sessionFormationRepository.findDistinctFormationsByEntrepriseId(entrepriseId)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -258,6 +279,15 @@ public class FormationService {
             );
         }
         return value;
+    }
+
+    private boolean mustScopeFormationsToEntreprise() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+
+        return auth.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .anyMatch(role -> "EQUIPMENT_MANAGER".equals(role) || "TRAINER".equals(role));
     }
 
     /* =========================

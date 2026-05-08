@@ -5,10 +5,12 @@ import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.evaluation.Evaluation;
 import com.s3m.formation.domain.evaluation.EvaluationCritere;
+import com.s3m.formation.domain.evaluation.EvaluationCritereRepository;
 import com.s3m.formation.domain.evaluation.EvaluationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
+import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -18,11 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.s3m.formation.domain.sessionCritere.SessionCritere;
 import com.s3m.formation.domain.sessionCritere.SessionCritereRepository;
+import com.s3m.formation.domain.sessionProgramme.SessionDailyProgram;
+import com.s3m.formation.domain.sessionProgramme.SessionDailyProgramEntry;
+import com.s3m.formation.domain.sessionProgramme.SessionDailyProgramRepository;
 import com.s3m.formation.domain.participation.ParticipationRepository;
 import com.s3m.formation.api.dto.EmployeResponseDto;
+import com.s3m.formation.domain.formateur.Formateur;
+import com.s3m.formation.domain.formateur.FormateurRepository;
+import java.util.Optional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +43,9 @@ public class EMService {
     private final EmployeRepository       employeRepo;
     private final SessionCritereRepository critereRepo;
     private final ParticipationRepository  participationRepo;
+    private final FormateurRepository formateurRepo;
+    private final EvaluationCritereRepository evalCritereRepo;
+    private final SessionDailyProgramRepository dailyProgramRepo;
 
     // ─── Dashboard KPIs ──────────────────────────────────────────────────────
     public EMDashboardKpiDto getDashboardKpis() {
@@ -109,6 +121,7 @@ public class EMService {
                     "idSession, idEmploye and jour are required");
         }
 
+
         SessionFormation session = sessionRepo.findById(req.idSession())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée"));
 
@@ -123,6 +136,23 @@ public class EMService {
         if (!isParticipant) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cet employé n'est pas participant à cette session");
+        }
+
+        // If trainer, verify session is assigned to them
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isTrainer = auth.getAuthorities().stream()
+                .anyMatch(a -> "TRAINER".equals(a.getAuthority()));
+
+        if (isTrainer) {
+            String email = (String) auth.getPrincipal();
+            Formateur formateur = formateurRepo.findByEmail(email)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.FORBIDDEN, "Formateur non trouvé"));
+            if (session.getFormateur() == null ||
+                    !session.getFormateur().getIdFormateur().equals(formateur.getIdFormateur())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Vous ne pouvez évaluer que vos sessions assignées");
+            }
         }
 
         // Upsert: update if exists, create if not
@@ -179,19 +209,40 @@ public class EMService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Session non trouvée"));
 
-        // Delete existing criteria for that day and replace
-        critereRepo.deleteBySession_IdSessionAndJour(sessionId, jour);
+        int totalDays = session.getDJours() != null
+                ? Math.max(1, session.getDJours().setScale(0, RoundingMode.CEILING).intValue())
+                : Math.max(1, jour);
+
+        List<String> libelles = req.libelles().stream()
+                .map(String::trim)
+                .filter(l -> !l.isBlank())
+                .toList();
+
+        if (libelles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Veuillez ajouter au moins un critere.");
+        }
+
+        realignEvaluationScores(sessionId, jour, libelles);
+
+        evalCritereRepo.deleteByEvaluation_Session_IdSessionAndCritereIndexGreaterThanEqual(
+                sessionId,
+                libelles.size()
+        );
+        evalCritereRepo.flush();
+
+        // One criteria set applies to every day of the session.
+        critereRepo.deleteBySession_IdSession(sessionId);
+        critereRepo.flush();
 
         List<SessionCritere> saved = new ArrayList<>();
-        List<String> libelles = req.libelles();
-
-        for (int i = 0; i < libelles.size(); i++) {
-            String libelle = libelles.get(i).trim();
-            if (!libelle.isBlank()) {
+        for (int day = 1; day <= totalDays; day++) {
+            for (int i = 0; i < libelles.size(); i++) {
+                String libelle = libelles.get(i);
                 saved.add(critereRepo.save(
                         SessionCritere.builder()
                                 .session(session)
-                                .jour(jour)
+                                .jour(day)
                                 .critereIndex(i)
                                 .libelle(libelle)
                                 .build()
@@ -200,6 +251,7 @@ public class EMService {
         }
 
         return saved.stream()
+                .filter(c -> c.getJour().equals(jour))
                 .map(c -> new SessionCritereDto(
                         c.getId(),
                         c.getJour(),
@@ -265,6 +317,163 @@ public class EMService {
                 ))
                 .toList();
     }
+
+    // ─── Get current trainer's Formateur ─────────────────────────────────────────
+    private Optional<Formateur> getCurrentFormateur() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = (String) auth.getPrincipal();
+        return formateurRepo.findByEmail(email);
+    }
+
+    // ─── Sessions for current trainer (assigned only) ─────────────────────────────
+    public List<SessionFormationResponseDto> getSessionsForTrainer() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String email = (String) auth.getPrincipal();
+
+        Formateur formateur = formateurRepo.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Aucun formateur trouvé pour cet email. Contactez l'administrateur."));
+
+        return sessionRepo.findByFormateur_IdFormateur(formateur.getIdFormateur())
+                .stream()
+                .map(this::toSessionDto)
+                .toList();
+    }
+
+    public List<FormationResponseDto> getFormationsForCurrentUser() {
+        Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
+        if (entrepriseId == null) return List.of();
+
+        return sessionRepo
+                .findDistinctFormationsByEntrepriseId(entrepriseId)
+                .stream()
+                .map(f -> new FormationResponseDto(
+                        f.getIdFormation(),
+                        f.getModule(),
+                        f.getTypeFormation(),
+                        f.getFamilleFormation(),
+                        f.getInterneExterne(),
+                        f.getSousFamille(),
+                        f.getReferenceFormation(),
+                        f.getAnnee(),
+                        f.getDureeHeures(),
+                        f.getDureeJours(),
+                        f.getPrixHeureMad(),
+                        f.getPrixJourMad()
+                ))
+                .toList();
+    }
+
+    private void realignEvaluationScores(Integer sessionId, Integer jour, List<String> newLibelles) {
+        List<SessionCritere> oldCriteres = critereRepo
+                .findBySession_IdSessionAndJourOrderByCritereIndexAsc(sessionId, jour);
+
+        if (oldCriteres.isEmpty()) return;
+
+        List<Evaluation> evaluations = evalRepo.findBySession_IdSessionOrderByJourAsc(sessionId);
+
+        for (Evaluation evaluation : evaluations) {
+            Map<String, Integer> oldScoresByLabel = new LinkedHashMap<>();
+
+            for (EvaluationCritere score : evaluation.getCriteres()) {
+                int oldIndex = score.getCritereIndex();
+                if (oldIndex >= 0 && oldIndex < oldCriteres.size()) {
+                    String oldLabel = oldCriteres.get(oldIndex).getLibelle();
+                    oldScoresByLabel.putIfAbsent(oldLabel, score.getScore());
+                }
+            }
+
+            evaluation.getCriteres().clear();
+            evalRepo.saveAndFlush(evaluation);
+
+            for (int i = 0; i < newLibelles.size(); i++) {
+                Integer oldScore = oldScoresByLabel.get(newLibelles.get(i));
+                if (oldScore != null) {
+                    evaluation.getCriteres().add(EvaluationCritere.builder()
+                            .evaluation(evaluation)
+                            .critereIndex(i)
+                            .score(oldScore)
+                            .build());
+                }
+            }
+
+            evalRepo.save(evaluation);
+        }
+    }
+
+    public DailyProgramDto getDailyProgram(Integer sessionId, Integer jour) {
+        getSessionForCurrentUser(sessionId);
+
+        return dailyProgramRepo.findBySession_IdSessionAndJour(sessionId, jour)
+                .map(this::toDailyProgramDto)
+                .orElseGet(() -> new DailyProgramDto(
+                        null,
+                        sessionId,
+                        jour,
+                        "",
+                        List.of()
+                ));
+    }
+
+    @Transactional
+    public DailyProgramDto saveDailyProgram(Integer sessionId, Integer jour, DailyProgramRequest request) {
+        getSessionForCurrentUser(sessionId);
+
+        SessionFormation session = sessionRepo.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session non trouvée"));
+
+        SessionDailyProgram program = dailyProgramRepo
+                .findBySession_IdSessionAndJour(sessionId, jour)
+                .orElseGet(() -> SessionDailyProgram.builder()
+                        .session(session)
+                        .jour(jour)
+                        .build());
+
+        program.setCommentaire(request.commentaire());
+        program.getEntries().clear();
+
+        List<DailyProgramEntryDto> entries = request.entries() != null
+                ? request.entries()
+                : List.of();
+
+        for (int i = 0; i < entries.size(); i++) {
+            DailyProgramEntryDto entry = entries.get(i);
+            String activite = entry.activite() != null ? entry.activite().trim() : "";
+            if (activite.isBlank()) continue;
+
+            program.getEntries().add(SessionDailyProgramEntry.builder()
+                    .program(program)
+                    .dateDebut(entry.dateDebut())
+                    .dateFin(entry.dateFin())
+                    .activite(activite)
+                    .position(i)
+                    .build());
+        }
+
+        return toDailyProgramDto(dailyProgramRepo.save(program));
+    }
+
+    private DailyProgramDto toDailyProgramDto(SessionDailyProgram program) {
+        return new DailyProgramDto(
+                program.getId(),
+                program.getSession().getIdSession(),
+                program.getJour(),
+                program.getCommentaire(),
+                program.getEntries().stream()
+                        .map(e -> new DailyProgramEntryDto(
+                                e.getId(),
+                                e.getDateDebut(),
+                                e.getDateFin(),
+                                e.getActivite(),
+                                e.getPosition()
+                        ))
+                        .toList()
+        );
+    }
+
+
 
     // ─── DTO mapper ───────────────────────────────────────────────────────────
     private EvaluationDto toDto(Evaluation e) {
