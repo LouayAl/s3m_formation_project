@@ -1,5 +1,6 @@
 package com.s3m.formation.api.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -15,5 +16,6 @@ public record EvaluationDto(
         String  remarques,
         Map<Integer, Integer> scores, // criterionIndex -> score (1-4)
         Double  avgScore,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        BigDecimal dureeHeures
 ) {}

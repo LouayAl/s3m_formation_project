@@ -23,25 +23,19 @@ public class FormationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public FormationResponseDto getFormationById(@PathVariable Integer id) {
         return formationService.getFormationById(id);
     }
 
-    @GetMapping("/reference/{reference}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
-    public FormationResponseDto getByReference(@PathVariable String reference) {
-        return formationService.getFormationByReference(reference);
-    }
-
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public List<FormationResponseDto> search(@RequestParam String keyword) {
         return formationService.searchFormations(keyword);
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public List<FormationResponseDto> filter(
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String famille,
@@ -58,25 +52,15 @@ public class FormationController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
-    public FormationResponseDto update(@PathVariable Integer id, @RequestBody Formation formation) {
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    public FormationResponseDto update(@PathVariable Integer id,
+                                       @RequestBody Formation formation) {
         return formationService.updateFormation(id, formation);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
     public void delete(@PathVariable Integer id) {
         formationService.deleteFormation(id);
     }
-
-    @PostMapping("/import")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
-    public ResponseEntity<String> importExcel(@RequestParam("file") MultipartFile file) {
-
-        String message = formationService.importFromExcel(file);
-
-        return ResponseEntity.ok(message);
-    }
-
-
 }

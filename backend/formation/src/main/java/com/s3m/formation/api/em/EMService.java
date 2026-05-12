@@ -7,6 +7,7 @@ import com.s3m.formation.domain.evaluation.Evaluation;
 import com.s3m.formation.domain.evaluation.EvaluationCritere;
 import com.s3m.formation.domain.evaluation.EvaluationCritereRepository;
 import com.s3m.formation.domain.evaluation.EvaluationRepository;
+import com.s3m.formation.domain.formation.FormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
@@ -46,6 +47,7 @@ public class EMService {
     private final FormateurRepository formateurRepo;
     private final EvaluationCritereRepository evalCritereRepo;
     private final SessionDailyProgramRepository dailyProgramRepo;
+    private final FormationRepository formationRepo;
 
     // ─── Dashboard KPIs ──────────────────────────────────────────────────────
     public EMDashboardKpiDto getDashboardKpis() {
@@ -167,6 +169,7 @@ public class EMService {
 
         eval.setPresence(req.presence() != null ? req.presence() : "PRESENT");
         eval.setRemarques(req.remarques());
+        eval.setDureeHeures(req.dureeHeures());
 
         // Replace all criteria scores
         eval.getCriteres().clear();
@@ -345,8 +348,8 @@ public class EMService {
         Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
         if (entrepriseId == null) return List.of();
 
-        return sessionRepo
-                .findDistinctFormationsByEntrepriseId(entrepriseId)
+        return formationRepo
+                .findByEntreprise_IdEntreprise(entrepriseId)
                 .stream()
                 .map(f -> new FormationResponseDto(
                         f.getIdFormation(),
@@ -360,7 +363,9 @@ public class EMService {
                         f.getDureeHeures(),
                         f.getDureeJours(),
                         f.getPrixHeureMad(),
-                        f.getPrixJourMad()
+                        f.getPrixJourMad(),
+                        f.getEntreprise().getIdEntreprise(),
+                        f.getEntreprise().getNomEntreprise()
                 ))
                 .toList();
     }
@@ -498,7 +503,8 @@ public class EMService {
                 e.getRemarques(),
                 scores,
                 Math.round(avg * 100.0) / 100.0,
-                e.getCreatedAt()
+                e.getCreatedAt(),
+                e.getDureeHeures()
         );
     }
     private SessionFormationResponseDto toSessionDto(SessionFormation s) {

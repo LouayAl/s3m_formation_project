@@ -26,7 +26,7 @@ public class SaisieDataController {
 
     @GetMapping("/formations")
     public List<FormationResponseDto> getAllFormations() {
-        return formationService.getAllFormations();
+        return formationService.getVisibleFormationsForCurrentUser();
     }
 
     @GetMapping("/employes")

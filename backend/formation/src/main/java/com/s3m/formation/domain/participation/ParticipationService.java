@@ -96,7 +96,7 @@ public class ParticipationService {
 
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ADMIN"));
+                .anyMatch(role -> role.equals("ADMIN")|| role.equals("EQUIPMENT_MANAGER"));
     }
 
     private void checkParticipantModificationAllowed(SessionFormation session) {

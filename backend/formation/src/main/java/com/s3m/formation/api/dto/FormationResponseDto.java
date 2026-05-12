@@ -14,6 +14,8 @@ public record FormationResponseDto(
         BigDecimal dureeHeures,
         BigDecimal dureeJours,
         BigDecimal prixHeureMad,
-        BigDecimal prixJourMad
+        BigDecimal prixJourMad,
+        Integer entrepriseId,
+        String entrepriseNom
 ) {
 }

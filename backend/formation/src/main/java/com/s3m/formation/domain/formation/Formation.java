@@ -1,5 +1,6 @@
 package com.s3m.formation.domain.formation;
 
+import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.fiche.FicheTechniqueFormation;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -61,5 +62,9 @@ public class Formation {
             orphanRemoval = true
     )
     private List<FicheTechniqueFormation> fichesTechniques;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_entreprise")
+    private Entreprise entreprise;
 
 }

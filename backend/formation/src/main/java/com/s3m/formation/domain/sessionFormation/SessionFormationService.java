@@ -18,11 +18,13 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -49,7 +51,10 @@ public class SessionFormationService {
        ========================= */
 
     public List<SessionFormationResponseDto> getAllSessions() {
-        return repository.findAllWithParticipants()
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer entrepriseId = (Integer) auth.getDetails();
+
+        return repository.search(null, null, entrepriseId, null, null)
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -63,9 +68,15 @@ public class SessionFormationService {
     }
 
     public SessionFormationResponseDto getSession(Integer sessionId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer entrepriseId = (Integer) auth.getDetails();
+
         return repository.findById(sessionId)
+                .filter(s -> s.getEntreprise() != null &&
+                        s.getEntreprise().getIdEntreprise().equals(entrepriseId))
                 .map(this::toDto)
-                .orElse(null);
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Session non trouvée"));
     }
 
     /* =========================
@@ -277,11 +288,6 @@ public class SessionFormationService {
     public void updateParticipants(Integer sessionId, List<Integer> participantIds) {
         SessionFormation session = repository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
-
-        // Only allow managers to modify if session hasn't started
-        if (!currentUserIsAdmin() && session.getStatut() != SessionFormationStatut.PLANIFIEE) {
-            throw new IllegalStateException("Managers can only update participants before the session starts");
-        }
 
         List<Participation> currentParticipations = session.getParticipations();
 

@@ -68,7 +68,7 @@ public class EmployeController {
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
         return employeService.createEmploye(employe);
     }
@@ -77,7 +77,7 @@ public class EmployeController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
         return employeService.updateEmploye(id, employe);
     }
@@ -87,7 +87,7 @@ public class EmployeController {
     // =========================
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
     public void delete(@PathVariable Integer id) {
         employeService.deleteEmploye(id);
     }
@@ -96,7 +96,7 @@ public class EmployeController {
     // IMPORT EXCEL
     // =========================
     @PostMapping("/import")
-    @PreAuthorize("hasAuthority('ADMIN','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
     public String importEmployesExcel(@RequestParam("file") MultipartFile file) {
         int imported = employeService.importFromExcel(file);
         return imported + " employés importés avec succès.";
