@@ -30,4 +30,7 @@ public class SessionCritere {
 
     @Column(nullable = false, length = 500)
     private String libelle;
+
+    @Column(length = 255)
+    private String categorie;
 }

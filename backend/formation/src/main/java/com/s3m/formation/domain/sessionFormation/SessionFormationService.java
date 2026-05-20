@@ -234,6 +234,7 @@ public class SessionFormationService {
                             e.getPrenom(),
                             e.getEmail(),
                             e.getTelephone(),
+                            e.getCin(),
                             e.getMatricule()
                     );
                 })

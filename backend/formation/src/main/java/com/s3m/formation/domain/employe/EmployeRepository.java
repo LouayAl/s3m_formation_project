@@ -23,6 +23,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
         WHERE LOWER(e.nom) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(e.prenom) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(e.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+           OR LOWER(e.cin) LIKE LOWER(CONCAT('%', :keyword, '%'))
            OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', :keyword, '%'))
     """)
     List<Employe> search(@Param("keyword") String keyword);
@@ -61,4 +62,5 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
 
     // Used by EMService.getDashboardKpis()
     long countByEntreprise_IdEntreprise(Integer idEntreprise);
+    boolean existsByCin(String cin);
 }

@@ -37,6 +37,7 @@ public class ParticipationService {
                         p.getEmploye().getPrenom(),
                         p.getEmploye().getEmail(),
                         p.getEmploye().getTelephone(),
+                        p.getEmploye().getCin(),
                         p.getEmploye().getMatricule()
                 ))
                 .toList();

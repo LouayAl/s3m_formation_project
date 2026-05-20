@@ -33,4 +33,5 @@ public class SessionDailyProgramEntry {
 
     @Column(nullable = false)
     private Integer position;
+
 }

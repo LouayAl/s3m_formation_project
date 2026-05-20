@@ -105,6 +105,7 @@ public class EmployeService {
 
         employe.setEntreprise(entreprise);
         employe.setDepartement(departement);
+        employe.setMatricule(blankToNull(employe.getMatricule()));
 
         try {
             Employe saved = employeRepository.saveAndFlush(employe);
@@ -129,7 +130,7 @@ public class EmployeService {
         existing.setTelephone(updated.getTelephone());
         existing.setCin(updated.getCin());
         existing.setCnss(updated.getCnss());
-        existing.setMatricule(updated.getMatricule());
+        existing.setMatricule(blankToNull(updated.getMatricule()));
         existing.setCsp(updated.getCsp());
         existing.setFonction(updated.getFonction());
         existing.setTypeContrat(updated.getTypeContrat());
@@ -182,76 +183,149 @@ public class EmployeService {
             Row headerRow = sheet.getRow(0);
 
             if (headerRow == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le fichier Excel ne contient pas d'en-tête.");
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Le fichier Excel ne contient pas d'en-tête."
+                );
             }
 
             Map<String, Integer> headers = getHeaderMap(headerRow);
+
             List<Employe> toSave = new ArrayList<>();
+
             int imported = 0;
             int skipped  = 0;
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
 
                 Row row = sheet.getRow(i);
+
                 if (row == null) continue;
 
-                String nom    = getString(row, headers, "nom");
-                String prenom = getString(row, headers, "prenom");
-                if (nom == null || prenom == null) continue;
+                String nom    = blankToNull(getString(row, headers, "nom"));
+                String prenom = blankToNull(getString(row, headers, "prenom"));
 
-                String matricule = getString(row, headers, "matricule");
-                String email     = getString(row, headers, "email");
+                // Skip empty rows
+                if (nom == null || prenom == null) {
+                    continue;
+                }
 
-                if (matricule != null && employeRepository.existsByMatricule(matricule)) { skipped++; continue; }
-                if (email     != null && employeRepository.existsByEmail(email))         { skipped++; continue; }
+                String cin        = blankToNull(getString(row, headers, "cin"));
+                String matricule  = blankToNull(getString(row, headers, "matricule"));
+                String email      = blankToNull(getString(row, headers, "email"));
 
-                String entrepriseNom  = getString(row, headers, "entreprise");
-                String departementNom = getString(row, headers, "departement");
+                // Duplicate checks
+                if (cin != null && employeRepository.existsByCin(cin)) {
+                    skipped++;
+                    continue;
+                }
+
+                if (matricule != null && employeRepository.existsByMatricule(matricule)) {
+                    skipped++;
+                    continue;
+                }
+
+                if (email != null && employeRepository.existsByEmail(email)) {
+                    skipped++;
+                    continue;
+                }
+
+                String entrepriseNom  = blankToNull(getString(row, headers, "entreprise"));
+                String departementNom = blankToNull(getString(row, headers, "departement"));
+
+                if (entrepriseNom == null) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Entreprise manquante à la ligne " + (i + 1)
+                    );
+                }
+
+                if (departementNom == null) {
+                    throw new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "Département manquant à la ligne " + (i + 1)
+                    );
+                }
 
                 Entreprise entreprise = entrepriseRepository
                         .findByNomEntrepriseIgnoreCase(entrepriseNom)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Entreprise inconnue : " + entrepriseNom));
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.BAD_REQUEST,
+                                        "Entreprise inconnue : " + entrepriseNom
+                                )
+                        );
 
                 Departement departement = departementRepository
                         .findByNomIgnoreCase(departementNom)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Département inconnu : " + departementNom));
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.BAD_REQUEST,
+                                        "Département inconnu : " + departementNom
+                                )
+                        );
 
                 Employe emp = new Employe();
+
                 emp.setNom(nom);
                 emp.setPrenom(prenom);
-                emp.setCin(getString(row, headers, "cin"));
-                emp.setCnss(getString(row, headers, "cnss"));
+
+                emp.setCin(cin);
+                emp.setCnss(blankToNull(getString(row, headers, "cnss")));
                 emp.setMatricule(matricule);
-                emp.setCsp(getString(row, headers, "csp"));
-                emp.setFonction(getString(row, headers, "fonction"));
-                emp.setTypeContrat(getString(row, headers, "type_contrat"));
-                emp.setTelephone(getString(row, headers, "telephone"));
+
+                emp.setCsp(blankToNull(getString(row, headers, "csp")));
+                emp.setFonction(blankToNull(getString(row, headers, "fonction")));
+                emp.setTypeContrat(blankToNull(getString(row, headers, "type_contrat")));
+
+                emp.setTelephone(blankToNull(getString(row, headers, "telephone")));
                 emp.setEmail(email);
 
-                String gender = getString(row, headers, "f_h");
+                String gender = blankToNull(getString(row, headers, "f_h"));
+
                 if (gender != null && !gender.isBlank()) {
                     emp.setF_h(gender.trim().toUpperCase().charAt(0));
                 }
 
                 emp.setDateEmbauche(getDate(row, headers, "date_embauche"));
                 emp.setDateNaissance(getDate(row, headers, "date_naissance"));
+
                 emp.setEntreprise(entreprise);
                 emp.setDepartement(departement);
 
                 toSave.add(emp);
+
                 imported++;
+
+                System.out.println(
+                        "IMPORTÉ => "
+                                + nom + " "
+                                + prenom
+                                + " | CIN=" + cin
+                                + " | MATRICULE=" + matricule
+                );
             }
 
             employeRepository.saveAll(toSave);
+
+            System.out.println("Import terminé : "
+                    + imported + " importés, "
+                    + skipped + " ignorés.");
+
             return imported;
 
         } catch (ResponseStatusException ex) {
+
             throw ex;
+
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Erreur import Excel Employés : " + e.getMessage());
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Erreur import Excel Employés : " + e.getMessage()
+            );
         }
     }
-
     // =========================
     // HELPERS
     // =========================
@@ -263,20 +337,39 @@ public class EmployeService {
         return map;
     }
 
-    private String getString(Row row, Map<String, Integer> headers, String col) {
-        Integer index = headers.get(col.toLowerCase());
-        if (index == null) return null;
-        Cell cell = row.getCell(index);
-        if (cell == null) return null;
+    private String getCellValue(Cell cell) {
 
-        if (cell.getCellType() == CellType.NUMERIC) {
-            double val = cell.getNumericCellValue();
-            if (val == Math.floor(val) && !Double.isInfinite(val)) {
-                return String.valueOf((long) val);
-            }
-            return String.valueOf(val);
-        }
-        return cell.toString().trim();
+        if (cell == null) return "";
+
+        return switch (cell.getCellType()) {
+
+            case STRING ->
+                    cell.getStringCellValue().trim();
+
+            case NUMERIC ->
+                    String.valueOf((long) cell.getNumericCellValue());
+
+            case BOOLEAN ->
+                    String.valueOf(cell.getBooleanCellValue());
+
+            default -> "";
+        };
+    }
+
+    private String getString(Row row, Map<String, Integer> headers, String key) {
+
+        Integer index = headers.get(key);
+
+        if (index == null) return "";
+
+        Cell cell = row.getCell(index);
+
+        return getCellValue(cell);
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        return value.trim();
     }
 
     private LocalDate getDate(Row row, Map<String, Integer> headers, String col) {

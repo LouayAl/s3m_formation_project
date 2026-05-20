@@ -198,7 +198,8 @@ public class EMService {
                         c.getId(),
                         c.getJour(),
                         c.getCritereIndex(),
-                        c.getLibelle()
+                        c.getLibelle(),
+                        c.getCategorie()
                 ))
                 .toList();
     }
@@ -216,15 +217,25 @@ public class EMService {
                 ? Math.max(1, session.getDJours().setScale(0, RoundingMode.CEILING).intValue())
                 : Math.max(1, jour);
 
-        List<String> libelles = req.libelles().stream()
-                .map(String::trim)
-                .filter(l -> !l.isBlank())
+        // Filter out blank criteres (categories with no libelle are skipped)
+        List<SessionCritereRequest.CritereEntry> entries = req.criteres().stream()
+                .filter(e -> e.libelle() != null && !e.libelle().trim().isBlank())
+                .map(e -> new SessionCritereRequest.CritereEntry(
+                        e.libelle().trim(),
+                        e.categorie() != null && !e.categorie().trim().isBlank()
+                                ? e.categorie().trim()
+                                : null
+                ))
                 .toList();
 
-        if (libelles.isEmpty()) {
+        if (entries.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Veuillez ajouter au moins un critere.");
         }
+
+        List<String> libelles = entries.stream()
+                .map(SessionCritereRequest.CritereEntry::libelle)
+                .toList();
 
         realignEvaluationScores(sessionId, jour, libelles);
 
@@ -240,14 +251,15 @@ public class EMService {
 
         List<SessionCritere> saved = new ArrayList<>();
         for (int day = 1; day <= totalDays; day++) {
-            for (int i = 0; i < libelles.size(); i++) {
-                String libelle = libelles.get(i);
+            for (int i = 0; i < entries.size(); i++) {
+                SessionCritereRequest.CritereEntry entry = entries.get(i);
                 saved.add(critereRepo.save(
                         SessionCritere.builder()
                                 .session(session)
                                 .jour(day)
                                 .critereIndex(i)
-                                .libelle(libelle)
+                                .libelle(entry.libelle())
+                                .categorie(entry.categorie())
                                 .build()
                 ));
             }
@@ -259,10 +271,12 @@ public class EMService {
                         c.getId(),
                         c.getJour(),
                         c.getCritereIndex(),
-                        c.getLibelle()
+                        c.getLibelle(),
+                        c.getCategorie()
                 ))
                 .toList();
     }
+
 
     // ─── Sessions filtered by current user's entreprise ───────────────────────
     public List<SessionFormationResponseDto> getSessionsForCurrentUser() {
@@ -437,24 +451,45 @@ public class EMService {
                         .build());
 
         program.setCommentaire(request.commentaire());
-        program.getEntries().clear();
 
         List<DailyProgramEntryDto> entries = request.entries() != null
                 ? request.entries()
                 : List.of();
 
-        for (int i = 0; i < entries.size(); i++) {
-            DailyProgramEntryDto entry = entries.get(i);
+        // Filter out blank entries
+        List<DailyProgramEntryDto> validEntries = new ArrayList<>();
+        for (DailyProgramEntryDto entry : entries) {
             String activite = entry.activite() != null ? entry.activite().trim() : "";
-            if (activite.isBlank()) continue;
+            if (!activite.isBlank()) validEntries.add(entry);
+        }
 
-            program.getEntries().add(SessionDailyProgramEntry.builder()
-                    .program(program)
-                    .dateDebut(entry.dateDebut())
-                    .dateFin(entry.dateFin())
-                    .activite(activite)
-                    .position(i)
-                    .build());
+        List<SessionDailyProgramEntry> existingEntries = program.getEntries();
+
+        // Update existing entries in place
+        for (int i = 0; i < validEntries.size(); i++) {
+            DailyProgramEntryDto dto = validEntries.get(i);
+            if (i < existingEntries.size()) {
+                // Update existing
+                SessionDailyProgramEntry existing = existingEntries.get(i);
+                existing.setDateDebut(dto.dateDebut());
+                existing.setDateFin(dto.dateFin());
+                existing.setActivite(dto.activite().trim());
+                existing.setPosition(i);
+            } else {
+                // Add new
+                existingEntries.add(SessionDailyProgramEntry.builder()
+                        .program(program)
+                        .dateDebut(dto.dateDebut())
+                        .dateFin(dto.dateFin())
+                        .activite(dto.activite().trim())
+                        .position(i)
+                        .build());
+            }
+        }
+
+        // Remove extras if new list is shorter
+        if (existingEntries.size() > validEntries.size()) {
+            existingEntries.subList(validEntries.size(), existingEntries.size()).clear();
         }
 
         return toDailyProgramDto(dailyProgramRepo.save(program));
@@ -517,7 +552,7 @@ public class EMService {
             var e = p.getEmploye();
             return new ParticipantResponseDto(
                     e.getIdEmploye(), e.getNom(), e.getPrenom(),
-                    e.getEmail(), e.getTelephone(), e.getMatricule()
+                    e.getEmail(), e.getTelephone(), e.getCin(), e.getMatricule()
             );
         }).toList()
                 : List.of();

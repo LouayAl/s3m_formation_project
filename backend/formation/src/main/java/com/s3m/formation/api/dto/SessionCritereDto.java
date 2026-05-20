@@ -4,6 +4,7 @@ public record SessionCritereDto(
         Integer id,
         Integer jour,
         Integer critereIndex,
-        String libelle
+        String libelle,
+        String categorie
 ) {
 }
