@@ -115,4 +115,21 @@ public interface SessionFormationRepository
         ORDER BY f.module
     """)
     List<Formation> findDistinctFormationsByEntrepriseId(@Param("entrepriseId") Integer entrepriseId);
+
+
+    @Query("""
+    SELECT s FROM SessionFormation s
+    WHERE s.statut = com.s3m.formation.domain.sessionFormation.SessionFormationStatut.TERMINEE
+      AND s.entreprise.idEntreprise = :entrepriseId
+      AND s.dateDebut >= :start
+      AND s.dateDebut <= :end
+    ORDER BY s.dateDebut ASC
+""")
+    List<SessionFormation> findTermineesForEntrepriseAndYear(
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("start")        LocalDate start,
+            @Param("end")          LocalDate end
+    );
+
+
 }
