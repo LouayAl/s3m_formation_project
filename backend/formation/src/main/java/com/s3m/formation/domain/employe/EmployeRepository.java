@@ -41,19 +41,17 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
             @Param("entrepriseId") Integer entrepriseId
     );
 
-    // ── Paginated search with optional entreprise scoping ──────────────────
     @Query("""
-        SELECT e FROM Employe e
-        WHERE (:entrepriseId IS NULL OR e.entreprise.idEntreprise = :entrepriseId)
-          AND (
-            :search IS NULL OR :search = ''
-            OR LOWER(e.nom)       LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(e.prenom)    LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(e.cin)       LIKE LOWER(CONCAT('%', :search, '%'))
-          )
-
-    """)
+    SELECT e FROM Employe e
+    WHERE (:entrepriseId IS NULL OR e.entreprise.idEntreprise = :entrepriseId)
+      AND (
+        :search IS NULL OR :search = ''
+        OR LOWER(e.nom)       LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(e.prenom)    LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(e.matricule) LIKE LOWER(CONCAT('%', :search, '%'))
+        OR LOWER(e.cin)       LIKE LOWER(CONCAT('%', :search, '%'))
+      )
+""")
     Page<Employe> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
             @Param("search") String search,

@@ -16,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,18 +56,71 @@ public class EmployeService {
     // GET PAGINATED
     // =========================
     public Page<EmployeResponseDto> getEmployesPaginated(
-            Integer entrepriseId, String search,
-            int page, int size,
-            String sortBy, String sortDir
+            Integer entrepriseId,
+            String search,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
     ) {
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Authentication auth =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        Integer userEntrepriseId =
+                (Integer) auth.getDetails();
+
+        boolean isManager = auth.getAuthorities()
+                .stream()
+                .anyMatch(a -> "MANAGER".equals(a.getAuthority()));
+
+        if (isManager) {
+            entrepriseId = userEntrepriseId;
+        }
+
+        Sort.Direction direction =
+                "desc".equalsIgnoreCase(sortDir)
+                        ? Sort.Direction.DESC
+                        : Sort.Direction.ASC;
+
+        String mappedField = switch (sortBy) {
+
+            case "entrepriseNom" -> "entreprise.nomEntreprise";
+            case "departementNom" -> "departement.nom";
+
+            case "nom" -> "nom";
+            case "prenom" -> "prenom";
+
+            case "cin" -> "cin";
+            case "cnss" -> "cnss";
+            case "matricule" -> "matricule";
+
+            case "csp" -> "csp";
+            case "f_h" -> "f_h";
+
+            case "email" -> "email";
+            case "telephone" -> "telephone";
+
+            case "dateEmbauche" -> "dateEmbauche";
+            case "dateNaissance" -> "dateNaissance";
+
+            case "fonction" -> "fonction";
+            case "typeContrat" -> "typeContrat";
+
+            default -> "idEmploye";
+        };
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(direction, mappedField)
+        );
+
         return employeRepository
                 .findPaginated(entrepriseId, search, pageable)
                 .map(this::toDto);
     }
+
 
     // =========================
     // GET BY ID

@@ -36,12 +36,12 @@ public class EmployeController {
     @GetMapping("/paginated")
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
     public Page<EmployeResponseDto> getEmployesPaginated(
-            @RequestParam(defaultValue = "0")          int page,
-            @RequestParam(defaultValue = "20")         int size,
-            @RequestParam(required = false)            String search,
-            @RequestParam(required = false)            Integer entrepriseId,
-            @RequestParam(defaultValue = "idEmploye")  String sortBy,
-            @RequestParam(defaultValue = "desc")       String sortDir
+            @RequestParam(defaultValue = "0")         int page,
+            @RequestParam(defaultValue = "20")        int size,
+            @RequestParam(required = false)           String search,
+            @RequestParam(required = false)           Integer entrepriseId,  // only used for ADMIN
+            @RequestParam(defaultValue = "idEmploye") String sortBy,
+            @RequestParam(defaultValue = "desc")      String sortDir
     ) {
         return employeService.getEmployesPaginated(entrepriseId, search, page, size, sortBy, sortDir);
     }
