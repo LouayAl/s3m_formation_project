@@ -8,5 +8,6 @@ public record BulkAddRequest(
         LocalDate dateSession,
         int        count,          // how many sessions to create
         BigDecimal dHeures,        // hours per session (default 8)
+        Integer nbParticipants,
         String     notes
 ) {}

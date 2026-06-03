@@ -41,7 +41,7 @@ public class SessionPlanifieeService {
         List<SessionPlanifiee> planned = planRepo.findByEntrepriseAndYear(entrepriseId, annee);
 
         List<SessionPlanifieeDto> dtos = planned.stream()
-                .map(s -> new SessionPlanifieeDto(s.getId(), s.getDateSession(), s.getDHeures(), s.getNotes()))
+                .map(s -> new SessionPlanifieeDto(s.getId(), s.getDateSession(), s.getDHeures(), s.getNbParticipants(), s.getNotes()))
                 .toList();
 
         List<PlanificationAnnuelleResponse.MonthSummary> plannedSummary = aggregateToMonths(planned);
@@ -71,6 +71,11 @@ public class SessionPlanifieeService {
                     .entreprise(entreprise)
                     .dateSession(req.dateSession())
                     .dHeures(heures)
+                    .nbParticipants(
+                            req.nbParticipants() != null
+                                    ? req.nbParticipants()
+                                    : 0
+                    )
                     .notes(req.notes())
                     .build());
         }
@@ -104,6 +109,11 @@ public class SessionPlanifieeService {
 
         session.setDateSession(req.dateSession());
         session.setDHeures(req.dHeures() != null ? req.dHeures() : DEFAULT_HEURES);
+        session.setNbParticipants(
+                req.nbParticipants() != null
+                        ? req.nbParticipants()
+                        : 0
+        );
         session.setNotes(req.notes());
         planRepo.save(session);
 

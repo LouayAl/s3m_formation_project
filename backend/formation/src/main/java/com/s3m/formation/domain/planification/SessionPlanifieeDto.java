@@ -7,5 +7,6 @@ public record SessionPlanifieeDto(
         Integer   id,
         LocalDate dateSession,
         BigDecimal dHeures,
+        Integer nbParticipants,
         String    notes
 ) {}

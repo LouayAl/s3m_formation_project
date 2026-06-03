@@ -30,6 +30,10 @@ public class SessionPlanifiee {
     @Builder.Default
     private BigDecimal dHeures = BigDecimal.valueOf(8);
 
+    @Column(name = "nb_participants")
+    @Builder.Default
+    private Integer nbParticipants = 0;
+
     @Column(name = "notes", length = 255)
     private String notes;
 }
