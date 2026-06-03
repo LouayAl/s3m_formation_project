@@ -24,7 +24,7 @@ public class EmployeController {
     // GET ALL (kept for ParticipantsModal and other internal uses)
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public List<EmployeResponseDto> getAllEmployes() {
         return employeService.getAllEmployes();
     }
@@ -34,7 +34,7 @@ public class EmployeController {
     // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public Page<EmployeResponseDto> getEmployesPaginated(
             @RequestParam(defaultValue = "0")         int page,
             @RequestParam(defaultValue = "20")        int size,
@@ -50,7 +50,7 @@ public class EmployeController {
     // GET BY ID
     // =========================
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
         return employeService.getEmployeById(id);
     }

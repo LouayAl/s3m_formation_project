@@ -20,19 +20,19 @@ public class SessionFormationController {
        READ
        ========================= */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public List<SessionFormationResponseDto> getAllSessions() {
         return service.getAllSessions();
     }
 
     @GetMapping("/formations/{formationId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','VISITOR')")
     public List<SessionFormationResponseDto> getByFormation(@PathVariable Integer formationId) {
         return service.getSessionsByFormation(formationId);
     }
 
     @GetMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public SessionFormationResponseDto getSession(@PathVariable Integer sessionId) {
         return service.getSession(sessionId);
     }

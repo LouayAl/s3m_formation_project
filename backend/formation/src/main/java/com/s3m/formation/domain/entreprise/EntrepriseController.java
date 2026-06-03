@@ -17,19 +17,19 @@ public class EntrepriseController {
     private final EntrepriseService entrepriseService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public List<EntrepriseResponseDto> getAllEntreprises() {
         return entrepriseService.getAllEntreprises();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public EntrepriseResponseDto getEntrepriseById(@PathVariable Integer id) {
         return entrepriseService.getEntrepriseById(id);
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public List<EntrepriseResponseDto> searchEntreprises(@RequestParam String keyword) {
         return entrepriseService.searchEntreprises(keyword);
     }

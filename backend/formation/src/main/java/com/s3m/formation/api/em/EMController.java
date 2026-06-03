@@ -19,21 +19,21 @@
 
         // GET /api/em/dashboard
         @GetMapping("/dashboard")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public EMDashboardKpiDto getDashboard() {
             return emService.getDashboardKpis();
         }
 
         // GET /api/em/sessions/{sessionId}/evaluations
         @GetMapping("/sessions/{sessionId}/evaluations")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<EvaluationDto> getSessionEvaluations(@PathVariable Integer sessionId) {
             return emService.getEvaluationsForSession(sessionId);
         }
 
         // GET /api/em/sessions/{sessionId}/participants/{employeId}/evaluations
         @GetMapping("/sessions/{sessionId}/participants/{employeId}/evaluations")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<EvaluationDto> getParticipantEvaluations(
                 @PathVariable Integer sessionId,
                 @PathVariable Integer employeId
@@ -43,7 +43,7 @@
 
         // GET /api/em/sessions/{sessionId}/stats
         @GetMapping("/sessions/{sessionId}/stats")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<Map<String, Object>> getSessionStats(@PathVariable Integer sessionId) {
             return emService.getParticipantStats(sessionId);
         }
@@ -58,7 +58,7 @@
 
         // GET /api/em/sessions/{sessionId}/days/{jour}/criteres
         @GetMapping("/sessions/{sessionId}/days/{jour}/criteres")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<SessionCritereDto> getCriteres(
                 @PathVariable Integer sessionId,
                 @PathVariable Integer jour
@@ -78,7 +78,7 @@
         }
 
         @GetMapping("/sessions/{sessionId}/days/{jour}/program")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public DailyProgramDto getDailyProgram(
                 @PathVariable Integer sessionId,
                 @PathVariable Integer jour
@@ -98,34 +98,34 @@
 
         // GET /api/em/sessions
         @GetMapping("/sessions")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<SessionFormationResponseDto> getSessionsForCurrentUser() {
             return emService.getSessionsForCurrentUser();
         }
 
         // GET /api/em/sessions/{sessionId}
         @GetMapping("/sessions/{sessionId}")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public SessionFormationResponseDto getSessionForCurrentUser(@PathVariable Integer sessionId) {
             return emService.getSessionForCurrentUser(sessionId);
         }
 
         @GetMapping("/employes")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<EmployeResponseDto> getEmployesForCurrentUser() {
             return emService.getEmployesForCurrentUser();
         }
 
         // GET /api/em/sessions/my — trainer's assigned sessions only
         @GetMapping("/sessions/my")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<SessionFormationResponseDto> getMySessionsAsTrainer() {
             return emService.getSessionsForTrainer();
         }
 
         // GET /api/em/formations — returns only formations linked to the caller's entreprise
         @GetMapping("/formations")
-        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<FormationResponseDto> getFormationsForCurrentUser() {
             return emService.getFormationsForCurrentUser();
         }

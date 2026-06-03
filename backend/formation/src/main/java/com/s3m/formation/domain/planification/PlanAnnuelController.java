@@ -18,7 +18,7 @@ public class PlanAnnuelController {
      * Accessible to ADMIN and MANAGER (read-only for MANAGER).
      */
     @GetMapping("/{annee}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','VISITOR')")
     public PlanAnnuelDto getPlan(
             @PathVariable Integer annee,
             @RequestParam Integer entrepriseId

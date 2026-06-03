@@ -19,13 +19,13 @@ public class ParticipationController {
        READ
        ========================= */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public List<ParticipantResponseDto> getParticipants(@PathVariable Integer sessionId) {
         return service.getParticipantsBySession(sessionId);
     }
 
     @GetMapping("/count")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
     public long countParticipants(@PathVariable Integer sessionId) {
         return service.countParticipants(sessionId);
     }
