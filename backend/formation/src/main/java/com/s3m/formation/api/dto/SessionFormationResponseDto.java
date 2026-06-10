@@ -23,6 +23,7 @@ public record SessionFormationResponseDto(
         BigDecimal dJours,
         SessionFormationStatut statut,
         int participantsCount,
-        List<ParticipantResponseDto> participants
-        ) {
+        List<ParticipantResponseDto> participants,
+        String lieu
+) {
 }

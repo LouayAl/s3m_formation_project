@@ -65,6 +65,8 @@ public class SessionFormation {
     @Column(name = "d_heures")
     private BigDecimal dHeures;
 
+    @Column(name = "lieu", length = 255)
+    private String lieu;
 
     @PrePersist
     public void prePersist() {

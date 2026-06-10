@@ -8,5 +8,7 @@ public interface CoutFormationRepository extends JpaRepository<CoutFormation, In
     List<CoutFormation> findBySession_Formation_IdFormation(Integer formationId);
     List<CoutFormation> findBySession_Demande_Entreprise_IdEntreprise(Integer clientId); // fixed
     List<CoutFormation> findBySession_IdSession(Integer sessionId);
+    boolean existsBySession_IdSession(Integer sessionId);
+
 }
 

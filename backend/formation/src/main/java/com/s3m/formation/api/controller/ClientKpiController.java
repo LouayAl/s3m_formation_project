@@ -4,7 +4,10 @@ import com.s3m.formation.api.kpi.client.dto.ClientKpiResponse;
 import com.s3m.formation.api.kpi.client.dto.TotalGrowthKpiDto;
 import com.s3m.formation.api.service.kpi.ClientKpiService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,11 +19,22 @@ public class ClientKpiController {
 
     private final ClientKpiService clientKpiService;
 
+    private Integer getAuthenticatedEntrepriseId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (Integer) auth.getDetails();
+    }
+
+    private boolean isUnauthorized(Integer clientId) {
+        return !getAuthenticatedEntrepriseId().equals(clientId);
+    }
+
     @GetMapping
     public ResponseEntity<ClientKpiResponse> getClientKpis(
             @PathVariable Integer clientId,
             @RequestParam(required = false) List<Integer> years
     ) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
         Integer[] yearsArray = (years == null || years.isEmpty())
                 ? new Integer[0]
                 : years.toArray(new Integer[0]);
@@ -30,19 +44,23 @@ public class ClientKpiController {
 
     @GetMapping("/years")
     public ResponseEntity<List<Integer>> getAvailableYears(@PathVariable Integer clientId) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
         return ResponseEntity.ok(clientKpiService.getAvailableYears(clientId));
     }
 
     @GetMapping("/total-growth")
-    public TotalGrowthKpiDto getTotalGrowth(
+    public ResponseEntity<TotalGrowthKpiDto> getTotalGrowth(
             @PathVariable Integer clientId,
             @RequestParam(defaultValue = "monthly") String period,
             @RequestParam(required = false) String month,
-            @RequestParam(required = false) List<Integer> years   // ← added
+            @RequestParam(required = false) List<Integer> years
     ) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
         Integer[] yearsArray = (years == null || years.isEmpty())
                 ? new Integer[0]
                 : years.toArray(new Integer[0]);
-        return clientKpiService.getTotalGrowthKpi(clientId, period, month, yearsArray);
+        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(clientId, period, month, yearsArray));
     }
 }

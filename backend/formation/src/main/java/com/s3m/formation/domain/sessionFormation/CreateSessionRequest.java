@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.sessionFormation;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.math.BigDecimal;
@@ -33,4 +34,6 @@ public class CreateSessionRequest {
 
     private Integer idFormateur; // optional
     private Integer idFournisseur; // optional
+
+    private String lieu;
 }

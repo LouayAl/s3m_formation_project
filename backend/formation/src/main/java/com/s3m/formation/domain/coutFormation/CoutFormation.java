@@ -25,10 +25,18 @@ public class CoutFormation {
     @JoinColumn(name = "id_session")
     private SessionFormation session;
 
+    @Column(name = "prix_heure_mad")
     private BigDecimal prixHeureMad;
+
+    @Column(name = "prix_jour_mad")
     private BigDecimal prixJourMad;
+
+    @Column(name = "autres_depenses")
     private BigDecimal autresDepenses;
+
+    @Column(name = "cout_total")
     private BigDecimal coutTotal;
 
+    @Column(name = "remboursement")
     private String remboursement;
 }

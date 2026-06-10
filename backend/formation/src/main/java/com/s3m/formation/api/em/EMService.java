@@ -574,7 +574,8 @@ public class EMService {
                 s.getDJours(),
                 s.getStatut(),
                 participants.size(),
-                participants
+                participants,
+                s.getLieu()
         );
     }
 }

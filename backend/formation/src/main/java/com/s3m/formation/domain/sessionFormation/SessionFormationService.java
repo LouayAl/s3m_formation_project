@@ -3,6 +3,8 @@ package com.s3m.formation.domain.sessionFormation;
 import com.s3m.formation.api.dto.ParticipantResponseDto;
 import com.s3m.formation.api.dto.SessionFormationResponseDto;
 import com.s3m.formation.api.dto.UpdateSessionRequest;
+import com.s3m.formation.domain.coutFormation.CoutFormation;
+import com.s3m.formation.domain.coutFormation.CoutFormationRepository;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
@@ -45,6 +47,8 @@ public class SessionFormationService {
     private final EntrepriseRepository entrepriseRepository;
     private final ParticipationRepository participationRepository;
     private final EmployeRepository employeRepository;
+    private final CoutFormationRepository coutFormationRepository;
+
 
     /* =========================
        READ
@@ -113,12 +117,45 @@ public class SessionFormationService {
                 .fournisseur(request.getIdFournisseur() != null
                         ? entrepriseRepository.findById(request.getIdFournisseur()).orElse(null)
                         : null)
+                .lieu(request.getLieu())
                 .build();
 
         String ref = generateReference(session);
         session.setReferenceSession(ref);
 
-        return repository.save(session);
+        SessionFormation saved = repository.save(session);
+        seedCoutFormation(saved, formation);
+        return saved;
+    }
+
+    private void seedCoutFormation(SessionFormation session, Formation formation) {
+        if (coutFormationRepository.existsBySession_IdSession(session.getIdSession())) {
+            return;
+        }
+
+        BigDecimal prixHeure      = formation.getPrixHeureMad();
+        BigDecimal prixJour       = formation.getPrixJourMad();
+        BigDecimal autresDepenses = formation.getAutresDepenses() != null
+                ? formation.getAutresDepenses()
+                : BigDecimal.ZERO;
+
+        BigDecimal coutTotal = BigDecimal.ZERO;
+        if (prixHeure != null && session.getDHeures() != null) {
+            coutTotal = prixHeure.multiply(session.getDHeures());
+        } else if (prixJour != null && session.getDJours() != null) {
+            coutTotal = prixJour.multiply(session.getDJours());
+        }
+        coutTotal = coutTotal.add(autresDepenses);
+
+        CoutFormation cout = new CoutFormation();
+        cout.setSession(session);
+        cout.setRemboursement(formation.getRemboursement());
+        cout.setPrixHeureMad(prixHeure);
+        cout.setPrixJourMad(prixJour);
+        cout.setAutresDepenses(autresDepenses);
+        cout.setCoutTotal(coutTotal);
+
+        coutFormationRepository.save(cout);
     }
 
     /* =========================
@@ -146,6 +183,7 @@ public class SessionFormationService {
         if (request.idFormation() != null)
             existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
         if (request.statut() != null) existing.setStatut(request.statut());
+        if (request.lieu() != null) existing.setLieu(request.lieu());
 
 
         SessionFormation saved = repository.save(existing);
@@ -260,7 +298,8 @@ public class SessionFormationService {
                 session.getDJours(),
                 session.getStatut(),
                 count,
-                participants
+                participants,
+                session.getLieu()
         );
     }
 

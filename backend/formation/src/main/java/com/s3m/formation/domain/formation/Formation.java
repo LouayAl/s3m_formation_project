@@ -67,4 +67,10 @@ public class Formation {
     @JoinColumn(name = "id_entreprise")
     private Entreprise entreprise;
 
+    @Column(name = "remboursement", length = 100)
+    private String remboursement;
+
+    @Column(name = "autres_depenses")
+    private BigDecimal autresDepenses;
+
 }
