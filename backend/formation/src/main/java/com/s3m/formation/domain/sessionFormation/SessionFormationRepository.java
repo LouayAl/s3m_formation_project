@@ -129,6 +129,7 @@ public interface SessionFormationRepository
             @Param("start")        LocalDate start,
             @Param("end")          LocalDate end
     );
+    List<SessionFormation> findByEntreprise_IdEntreprise(Integer entrepriseId);
 
 
 }
