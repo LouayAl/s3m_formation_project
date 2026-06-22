@@ -130,6 +130,7 @@ public interface SessionFormationRepository
             @Param("end")          LocalDate end
     );
     List<SessionFormation> findByEntreprise_IdEntreprise(Integer entrepriseId);
+    boolean existsByReferenceSessionAndIdSessionNot(String referenceSession, Integer idSession);
 
 
 }

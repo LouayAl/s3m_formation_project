@@ -3,6 +3,7 @@ package com.s3m.formation.domain.evaluationAChaud;
 import com.s3m.formation.api.dto.EvaluationAChaudRequest;
 import com.s3m.formation.api.dto.EvaluationAChaudStatsDto;
 import com.s3m.formation.api.dto.EvaluationSummaryDto;
+import com.s3m.formation.api.dto.SatisfactionKpiDto;
 import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.participation.ParticipationRepository;
 import lombok.RequiredArgsConstructor;
@@ -71,5 +72,11 @@ public class EvaluationAChaudController {
                 "questions", FormulaireConstants.QUESTIONS,
                 "scaleLabels", FormulaireConstants.SCALE_LABELS
         ));
+    }
+
+    @GetMapping("/api/evaluation-a-chaud/session/{sessionId}/kpis")
+    public ResponseEntity<SatisfactionKpiDto> getSatisfactionKpis(
+            @PathVariable Integer sessionId) {
+        return ResponseEntity.ok(service.getSatisfactionKpis(sessionId));
     }
 }

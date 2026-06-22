@@ -12,10 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,10 +26,10 @@ public class EvaluationAChaudService {
     private final EmployeRepository employeRepository;
 
     public void submit(EvaluationAChaudRequest req) {
-        if (repository.existsBySession_IdSessionAndEmploye_IdEmployeAndJourEvaluation(
-                req.idSession(), req.idEmploye(), req.jourEvaluation())) {
+        if (repository.existsBySession_IdSessionAndEmploye_IdEmploye(
+                req.idSession(), req.idEmploye())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Vous avez déjà soumis une évaluation pour ce jour.");
+                    "Vous avez déjà soumis une évaluation pour cette session.");
         }
 
         SessionFormation session = sessionRepository.findById(req.idSession())
@@ -42,14 +40,13 @@ public class EvaluationAChaudService {
         EvaluationAChaud eval = EvaluationAChaud.builder()
                 .session(session)
                 .employe(employe)
-                .jourEvaluation(req.jourEvaluation())
+                .jourEvaluation(null)   // no longer used
                 .commentaire(req.commentaire())
                 .soumisLe(LocalDateTime.now())
                 .build();
 
         EvaluationAChaud saved = repository.save(eval);
 
-        // Save individual answers
         req.reponses().forEach((questionId, score) -> {
             EvaluationReponse reponse = EvaluationReponse.builder()
                     .evalChaud(saved)
@@ -73,34 +70,13 @@ public class EvaluationAChaudService {
         if (allEvals.isEmpty()) {
             return new EvaluationAChaudStatsDto(
                     sessionId, session.getFormation().getModule(),
-                    0, totalParticipants, 0, List.of()
+                    0, totalParticipants, 0, Map.of(), List.of()
             );
         }
 
-        Map<LocalDate, List<EvaluationAChaud>> byDay = allEvals.stream()
-                .filter(e -> e.getJourEvaluation() != null)
-                .collect(Collectors.groupingBy(EvaluationAChaud::getJourEvaluation));
-
-        List<EvaluationJourStatsDto> parJour = byDay.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey())
-                .map(entry -> buildJourStats(entry.getKey(), entry.getValue()))
-                .toList();
-
-        double moyenneGlobale = round(parJour.stream()
-                .mapToDouble(EvaluationJourStatsDto::moyenneGlobale)
-                .average().orElse(0));
-
-        return new EvaluationAChaudStatsDto(
-                sessionId, session.getFormation().getModule(),
-                allEvals.size(), totalParticipants, moyenneGlobale, parJour
-        );
-    }
-
-    private EvaluationJourStatsDto buildJourStats(LocalDate jour,
-                                                  List<EvaluationAChaud> evals) {
-        // Collect all answers grouped by questionId
+        // Aggregate all scores across all evaluations
         Map<Integer, List<Integer>> scoresByQuestion = new HashMap<>();
-        for (EvaluationAChaud eval : evals) {
+        for (EvaluationAChaud eval : allEvals) {
             if (eval.getReponses() != null) {
                 for (EvaluationReponse r : eval.getReponses()) {
                     scoresByQuestion
@@ -110,7 +86,6 @@ public class EvaluationAChaudService {
             }
         }
 
-        // Average per question
         Map<Integer, Double> moyennesParQuestion = new LinkedHashMap<>();
         for (int qId = 1; qId <= 13; qId++) {
             List<Integer> scores = scoresByQuestion.getOrDefault(qId, List.of());
@@ -119,14 +94,19 @@ public class EvaluationAChaudService {
             moyennesParQuestion.put(qId, avg);
         }
 
-        double moyenneGlobale = round(moyennesParQuestion.values().stream()
-                .mapToDouble(Double::doubleValue).average().orElse(0));
+        double moyenneGlobale = round(
+                moyennesParQuestion.values().stream()
+                        .mapToDouble(Double::doubleValue)
+                        .average().orElse(0)
+        );
 
-        List<EvaluationAChaudResponseDto> reponses = evals.stream()
-                .map(this::toDto).toList();
+        List<EvaluationAChaudResponseDto> reponses = allEvals.stream()
+                .map(this::toDto)
+                .toList();
 
-        return new EvaluationJourStatsDto(
-                jour, evals.size(), moyenneGlobale,
+        return new EvaluationAChaudStatsDto(
+                sessionId, session.getFormation().getModule(),
+                allEvals.size(), totalParticipants, moyenneGlobale,
                 moyennesParQuestion, reponses
         );
     }
@@ -147,7 +127,7 @@ public class EvaluationAChaudService {
                 e.getIdEvalChaud(),
                 e.getSession().getIdSession(),
                 e.getEmploye().getNom() + " " + e.getEmploye().getPrenom(),
-                e.getJourEvaluation(),
+                e.getJourEvaluation(), // will be null, kept for DTO compatibility
                 reponseDtos,
                 e.getCommentaire(),
                 e.getSoumisLe()
@@ -166,7 +146,6 @@ public class EvaluationAChaudService {
                     LocalDateTime derniere = null;
 
                     if (!evals.isEmpty()) {
-                        // Average all scores across all questions and all evals
                         List<Integer> allScores = evals.stream()
                                 .filter(e -> e.getReponses() != null)
                                 .flatMap(e -> e.getReponses().stream())
@@ -198,5 +177,28 @@ public class EvaluationAChaudService {
                 })
                 .filter(s -> s.totalReponses() > 0)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public SatisfactionKpiDto getSatisfactionKpis(Integer sessionId) {
+        SessionFormation session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        Integer entrepriseId = session.getEntreprise().getIdEntreprise();
+        Integer formationId  = session.getFormation().getIdFormation();
+
+        double s3m       = round(repository.findAvgScoreGlobalS3M().orElse(0.0));
+        double client    = round(repository.findAvgScoreByEntreprise(entrepriseId).orElse(0.0));
+        double formation = round(repository.findAvgScoreByEntrepriseAndFormation(
+                entrepriseId, formationId).orElse(0.0));
+        double sessionAvg = round(repository.findAvgScoreBySession(sessionId).orElse(0.0));
+
+        return new SatisfactionKpiDto(
+                s3m, client, formation, sessionAvg,
+                repository.countReponsesGlobalS3M(),
+                repository.countReponsesForEntreprise(entrepriseId),
+                repository.countReponsesForEntrepriseAndFormation(entrepriseId, formationId),
+                repository.countReponsesForSession(sessionId)
+        );
     }
 }

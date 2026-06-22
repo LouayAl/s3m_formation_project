@@ -15,6 +15,7 @@ public record UpdateSessionRequest(
         Integer idFournisseur,
         Integer idFormation,
         SessionFormationStatut statut,
-        String lieu
+        String lieu,
+        String referenceSession
 ) {
 }

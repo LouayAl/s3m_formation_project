@@ -162,18 +162,24 @@ public class SessionFormationService {
        UPDATE
        ========================= */
     public SessionFormationResponseDto updateSession(Integer sessionId, UpdateSessionRequest request) {
-
-
         SessionFormation existing = repository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
-
+        if (request.referenceSession() != null && !request.referenceSession().isBlank()) {
+            // Check uniqueness — reject if another session already has this ref
+            if (repository.existsByReferenceSessionAndIdSessionNot(
+                    request.referenceSession(), sessionId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Cette référence est déjà utilisée par une autre session.");
+            }
+            existing.setReferenceSession(request.referenceSession());
+        }
         if (request.dHeures() != null) {
             existing.setDHeures(request.dHeures());
             existing.setDJours(request.dJours());
         }
-        if (request.dateDebut() != null) existing.setDateDebut(request.dateDebut());
-        if (request.dateFin() != null) existing.setDateFin(request.dateFin());
+        if (request.dateDebut() != null)   existing.setDateDebut(request.dateDebut());
+        if (request.dateFin() != null)     existing.setDateFin(request.dateFin());
         if (request.idFormateur() != null)
             existing.setFormateur(formateurRepository.findById(request.idFormateur()).orElse(null));
         if (request.idEntreprise() != null)
@@ -183,12 +189,9 @@ public class SessionFormationService {
         if (request.idFormation() != null)
             existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
         if (request.statut() != null) existing.setStatut(request.statut());
-        if (request.lieu() != null) existing.setLieu(request.lieu());
+        if (request.lieu() != null)   existing.setLieu(request.lieu());
 
-
-        SessionFormation saved = repository.save(existing);
-
-        return toDto(saved);
+        return toDto(repository.save(existing));
     }
 
 
@@ -199,6 +202,11 @@ public class SessionFormationService {
     public void deleteSession(Integer sessionId) {
         SessionFormation session = repository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
+
+        // Delete dependent CoutFormation rows first to avoid FK violation
+        List<CoutFormation> couts = coutFormationRepository.findBySession_IdSession(sessionId);
+        coutFormationRepository.deleteAll(couts);
+
         repository.delete(session);
     }
 
