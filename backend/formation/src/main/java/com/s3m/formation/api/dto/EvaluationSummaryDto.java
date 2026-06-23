@@ -6,6 +6,7 @@ public record EvaluationSummaryDto(
         Integer idSession,
         String referenceSession,
         String moduleFormation,
+        String formateur,
         int totalReponses,
         int totalParticipants,
         double moyenneGlobale,

@@ -7,11 +7,17 @@ import com.s3m.formation.api.dto.SatisfactionKpiDto;
 import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.participation.ParticipationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 @RestController
 @RequiredArgsConstructor
@@ -78,5 +84,44 @@ public class EvaluationAChaudController {
     public ResponseEntity<SatisfactionKpiDto> getSatisfactionKpis(
             @PathVariable Integer sessionId) {
         return ResponseEntity.ok(service.getSatisfactionKpis(sessionId));
+    }
+
+    // ── EXPORTS ──────────────────────────────────────────────────────────────
+
+    @GetMapping("/api/evaluation-a-chaud/session/{sessionId}/export/pdf")
+    public ResponseEntity<byte[]> exportPdf(@PathVariable Integer sessionId) {
+        byte[] pdf = service.exportPdf(sessionId);
+        EvaluationAChaudStatsDto stats = service.getStats(sessionId);
+        String filename = buildFilename(stats.referenceSession(), stats.moduleFormation(), "pdf");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                .body(pdf);
+    }
+
+    @GetMapping("/api/evaluation-a-chaud/session/{sessionId}/export/excel")
+    public ResponseEntity<byte[]> exportExcel(@PathVariable Integer sessionId) {
+        byte[] excel = service.exportExcel(sessionId);
+        EvaluationAChaudStatsDto stats = service.getStats(sessionId);
+        String filename = buildFilename(stats.referenceSession(), stats.moduleFormation(), "xlsx");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                .body(excel);
+    }
+
+    private static final Pattern NON_ALNUM = Pattern.compile("[^a-zA-Z0-9_-]");
+
+    private String buildFilename(String referenceSession, String moduleFormation, String ext) {
+        String base = "evaluation_" + referenceSession + "_" + moduleFormation;
+        String normalized = Normalizer.normalize(base, Normalizer.Form.NFD)
+                .replaceAll("[\\p{InCombiningDiacriticalMarks}]", "");
+        String safe = NON_ALNUM.matcher(normalized.replace(' ', '_')).replaceAll("");
+        return safe + "." + ext;
     }
 }

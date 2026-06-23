@@ -6,7 +6,9 @@ import java.util.Map;
 
 public record EvaluationAChaudStatsDto(
         Integer idSession,
+        String referenceSession,
         String moduleFormation,
+        String formateur,
         int totalReponses,
         int totalParticipants,
         double moyenneGlobale,
