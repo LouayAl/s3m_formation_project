@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/clients/{clientId}/kpis")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class ClientKpiController {
 
@@ -24,32 +24,41 @@ public class ClientKpiController {
         return (Integer) auth.getDetails();
     }
 
-    private boolean isUnauthorized(Integer clientId) {
-        return !getAuthenticatedEntrepriseId().equals(clientId);
+    private boolean isAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(authority -> "ADMIN".equals(authority.getAuthority()));
     }
 
-    @GetMapping
+    private boolean isUnauthorized(Integer clientId) {
+        return !isAdmin() && !getAuthenticatedEntrepriseId().equals(clientId);
+    }
+
+    private Integer[] toYearsArray(List<Integer> years) {
+        return (years == null || years.isEmpty())
+                ? new Integer[0]
+                : years.toArray(new Integer[0]);
+    }
+
+    @GetMapping("/clients/{clientId}/kpis")
     public ResponseEntity<ClientKpiResponse> getClientKpis(
             @PathVariable Integer clientId,
             @RequestParam(required = false) List<Integer> years
     ) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        Integer[] yearsArray = (years == null || years.isEmpty())
-                ? new Integer[0]
-                : years.toArray(new Integer[0]);
-        ClientKpiResponse response = clientKpiService.getClientKpis(clientId, yearsArray);
+        ClientKpiResponse response = clientKpiService.getClientKpis(clientId, toYearsArray(years));
         return response != null ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
-    @GetMapping("/years")
+    @GetMapping("/clients/{clientId}/kpis/years")
     public ResponseEntity<List<Integer>> getAvailableYears(@PathVariable Integer clientId) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
         return ResponseEntity.ok(clientKpiService.getAvailableYears(clientId));
     }
 
-    @GetMapping("/total-growth")
+    @GetMapping("/clients/{clientId}/kpis/total-growth")
     public ResponseEntity<TotalGrowthKpiDto> getTotalGrowth(
             @PathVariable Integer clientId,
             @RequestParam(defaultValue = "monthly") String period,
@@ -58,9 +67,30 @@ public class ClientKpiController {
     ) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        Integer[] yearsArray = (years == null || years.isEmpty())
-                ? new Integer[0]
-                : years.toArray(new Integer[0]);
-        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(clientId, period, month, yearsArray));
+        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(clientId, period, month, toYearsArray(years)));
+    }
+
+    @GetMapping("/admin/kpis")
+    public ResponseEntity<ClientKpiResponse> getAdminKpis(
+            @RequestParam(required = false) List<Integer> years
+    ) {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(clientKpiService.getClientKpis(null, toYearsArray(years)));
+    }
+
+    @GetMapping("/admin/kpis/years")
+    public ResponseEntity<List<Integer>> getAdminAvailableYears() {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(clientKpiService.getAvailableYears(null));
+    }
+
+    @GetMapping("/admin/kpis/total-growth")
+    public ResponseEntity<TotalGrowthKpiDto> getAdminTotalGrowth(
+            @RequestParam(defaultValue = "monthly") String period,
+            @RequestParam(required = false) String month,
+            @RequestParam(required = false) List<Integer> years
+    ) {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(null, period, month, toYearsArray(years)));
     }
 }

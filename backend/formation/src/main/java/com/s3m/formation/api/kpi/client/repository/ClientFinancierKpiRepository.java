@@ -21,7 +21,7 @@ public interface ClientFinancierKpiRepository extends JpaRepository<SessionForma
         FROM session_formation sf
         LEFT JOIN cout_formation cf ON cf.id_session = sf.id_session
         LEFT JOIN participation p   ON p.id_session  = sf.id_session
-        WHERE sf.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR sf.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM sf.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     ClientFinancierKpiProjection computeFinancier(
@@ -38,7 +38,7 @@ public interface ClientFinancierKpiRepository extends JpaRepository<SessionForma
         FROM cout_formation cf
         JOIN session_formation sf ON sf.id_session = cf.id_session
         JOIN participation p      ON p.id_session  = sf.id_session
-        WHERE sf.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR sf.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM sf.date_debut)::INT = ANY(:years)
           AND cf.remboursement IN ('CSF', 'Emergence')
         GROUP BY cf.remboursement

@@ -2,6 +2,8 @@ package com.s3m.formation.domain.sessionFormation;
 
 import com.s3m.formation.domain.reservation.DemandeReservation;
 import com.s3m.formation.domain.formation.Formation;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -132,5 +134,41 @@ public interface SessionFormationRepository
     List<SessionFormation> findByEntreprise_IdEntreprise(Integer entrepriseId);
     boolean existsByReferenceSessionAndIdSessionNot(String referenceSession, Integer idSession);
 
+    // ==============================
+    // PAGINATED (server-side) LISTING
+    // ==============================
+
+    // Note: no collection JOIN FETCH here (participations are lazy-loaded in the
+    // service, same as the existing search() method) so Spring Data pagination
+    // works correctly without the "in-memory pagination" warning.
+    @Query("""
+        SELECT s
+        FROM SessionFormation s
+        JOIN s.formation f
+        LEFT JOIN s.formateur fo
+        LEFT JOIN s.entreprise e
+        LEFT JOIN s.fournisseur fu
+        WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+          AND (:search IS NULL OR :search = ''
+               OR LOWER(f.module) LIKE LOWER(CONCAT('%', :search, '%'))
+               OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', :search, '%')))
+          AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
+    """)
+    Page<SessionFormation> findPaginated(
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("search") String search,
+            @Param("years") List<Integer> years,
+            Pageable pageable
+    );
+
+    // For the year-filter dropdown: all start dates in scope, so the frontend
+    // can list only the years that actually have sessions.
+    @Query("""
+        SELECT s.dateDebut
+        FROM SessionFormation s
+        WHERE s.dateDebut IS NOT NULL
+          AND (:entrepriseId IS NULL OR s.entreprise.idEntreprise = :entrepriseId)
+    """)
+    List<LocalDate> findAllDateDebuts(@Param("entrepriseId") Integer entrepriseId);
 
 }

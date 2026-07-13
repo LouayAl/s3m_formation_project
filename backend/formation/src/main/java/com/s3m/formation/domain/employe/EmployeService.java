@@ -40,9 +40,19 @@ public class EmployeService {
     private final DepartementRepository departementRepository;
 
     // =========================
-    // GET ALL (kept for internal use e.g. ParticipantsModal)
+    // GET ALL (SCOPED, ADMIN CAN FILTER)
+    // kept for internal use e.g. ParticipantsModal / SaisieDataController
     // =========================
-    public List<EmployeResponseDto> getAllEmployes() {
+    public List<EmployeResponseDto> getAllEmployes(Integer requestedEntrepriseId) {
+        if (currentUserIsAdminOnly()) {
+            // ADMIN: requestedEntrepriseId == null -> every employee in the DB
+            List<Employe> employes = (requestedEntrepriseId == null)
+                    ? employeRepository.findAll()
+                    : employeRepository.findByEntreprise_IdEntreprise(requestedEntrepriseId);
+            return employes.stream().map(this::toDto).toList();
+        }
+
+        // Everyone else: always scoped to their own entreprise, ignore requestedEntrepriseId
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = (Integer) auth.getDetails();
 
@@ -461,5 +471,20 @@ public class EmployeService {
                 employe.getDepartement() != null ? employe.getDepartement().getId() : null,
                 employe.getDepartement() != null ? employe.getDepartement().getNom() : null
         );
+    }
+
+    // =========================
+    // ROLE HELPER
+    // =========================
+    private boolean currentUserIsAdminOnly() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+
+        for (GrantedAuthority authority : auth.getAuthorities()) {
+            if ("ADMIN".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

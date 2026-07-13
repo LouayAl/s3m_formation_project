@@ -38,7 +38,13 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // IMPORTANT: must match exactly what browser sends
-        config.setAllowedOrigins(List.of( "http://localhost:3000","https://formation.ifmia.ma","https://trainin.ma","https://www.trainin.ma"));
+        config.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "https://formation.ifmia.ma",
+                "https://trainin.ma",
+                "https://www.trainin.ma"
+        ));
 
         config.setAllowedMethods(List.of(
                 "GET",

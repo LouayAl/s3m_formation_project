@@ -97,7 +97,7 @@ public class EvaluationAChaudController {
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                        "attachment; filename=\"" + filename + "\"")  // ← Simple, ASCII-only
                 .body(pdf);
     }
 
@@ -111,7 +111,7 @@ public class EvaluationAChaudController {
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        ContentDisposition.attachment().filename(filename, StandardCharsets.UTF_8).build().toString())
+                        "attachment; filename=\"" + filename + "\"")  // ← Simple, ASCII-only
                 .body(excel);
     }
 

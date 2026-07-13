@@ -16,7 +16,7 @@ public interface ClientHoursByFournisseurKpiRepository extends JpaRepository<Ses
         SUM(s.formation.dureeHeures) AS totalHeures
     FROM Participation p
     JOIN p.session s
-    WHERE s.entreprise.idEntreprise = :clientId
+    WHERE (:clientId IS NULL OR s.entreprise.idEntreprise = :clientId)
     GROUP BY s.fournisseur.nomEntreprise
     ORDER BY totalHeures DESC
 """)
@@ -33,7 +33,7 @@ public interface ClientHoursByFournisseurKpiRepository extends JpaRepository<Ses
     JOIN session_formation s ON p.id_session = s.id_session
     JOIN formation fm ON s.id_formation = fm.id_formation
     JOIN entreprise f ON s.id_fournisseur = f.id_entreprise
-    WHERE s.id_entreprise = :clientId
+    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
       AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     GROUP BY s.id_fournisseur, f.nom_entreprise
     ORDER BY totalHeures DESC

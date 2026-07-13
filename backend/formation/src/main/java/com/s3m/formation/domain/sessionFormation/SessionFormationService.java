@@ -20,6 +20,10 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -32,6 +36,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -54,13 +59,74 @@ public class SessionFormationService {
        READ
        ========================= */
 
-    public List<SessionFormationResponseDto> getAllSessions() {
+    public List<SessionFormationResponseDto> getAllSessions(Integer requestedEntrepriseId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = currentUserIsAdminOnly()
+                ? requestedEntrepriseId
+                : (Integer) auth.getDetails();
 
         return repository.search(null, null, entrepriseId, null, null)
                 .stream()
                 .map(this::toDto)
+                .toList();
+    }
+
+    /* =========================
+       READ — PAGINATED (server-side)
+       ========================= */
+
+    public Page<SessionFormationResponseDto> getSessionsPaginated(
+            Integer requestedEntrepriseId,
+            String search,
+            List<Integer> years,
+            int page,
+            int size,
+            String sortBy,
+            String sortDir
+    ) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer entrepriseId = currentUserIsAdminOnly()
+                ? requestedEntrepriseId
+                : (Integer) auth.getDetails();
+
+        Sort.Direction direction = "desc".equalsIgnoreCase(sortDir)
+                ? Sort.Direction.DESC
+                : Sort.Direction.ASC;
+
+        String mappedField = switch (sortBy) {
+            case "formation"           -> "formation.module";
+            case "entrepriseNom"       -> "entreprise.nomEntreprise";
+            case "fournisseurNom"      -> "fournisseur.nomEntreprise";
+            case "formateurNomComplet" -> "formateur.nom";
+            case "referenceSession"    -> "referenceSession";
+            case "dateDebut"           -> "dateDebut";
+            case "dateFin"             -> "dateFin";
+            case "dHeures"             -> "dHeures";
+            case "dJours"              -> "dJours";
+            case "lieu"                -> "lieu";
+            case "statut"              -> "statut";
+            default -> "idSession";
+        };
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, mappedField));
+
+        List<Integer> yearsFilter = (years == null || years.isEmpty()) ? null : years;
+
+        return repository.findPaginated(entrepriseId, search, yearsFilter, pageable)
+                .map(this::toDto);
+    }
+
+    // Distinct years available for the year-filter dropdown (scoped the same way as sessions).
+    public List<Integer> getAvailableYears(Integer requestedEntrepriseId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer entrepriseId = currentUserIsAdminOnly()
+                ? requestedEntrepriseId
+                : (Integer) auth.getDetails();
+
+        return repository.findAllDateDebuts(entrepriseId).stream()
+                .map(LocalDate::getYear)
+                .distinct()
+                .sorted(Comparator.reverseOrder())
                 .toList();
     }
 
@@ -102,6 +168,8 @@ public class SessionFormationService {
 
         Entreprise entreprise = entrepriseRepository.findById(request.getIdEntreprise())
                 .orElseThrow(() -> new RuntimeException("Entreprise not found"));
+
+        assertFormationMatchesEntreprise(formation, entreprise.getIdEntreprise());
 
         SessionFormation session = SessionFormation.builder()
                 .formation(formation)
@@ -190,6 +258,12 @@ public class SessionFormationService {
             existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
         if (request.statut() != null) existing.setStatut(request.statut());
         if (request.lieu() != null)   existing.setLieu(request.lieu());
+
+        // Re-validate consistency whenever either side could have changed (or even if
+        // neither did — cheap guard against any pre-existing inconsistent data).
+        if (existing.getFormation() != null && existing.getEntreprise() != null) {
+            assertFormationMatchesEntreprise(existing.getFormation(), existing.getEntreprise().getIdEntreprise());
+        }
 
         return toDto(repository.save(existing));
     }
@@ -357,6 +431,24 @@ public class SessionFormationService {
         });
     }
 
+    /**
+     * Guards against a formation and a session being assigned to different entreprises.
+     * Formations can share the same module/name across entreprises, so this is a hard
+     * server-side check, not just a frontend warning — the person can't get around it
+     * by hitting the API directly.
+     */
+    private void assertFormationMatchesEntreprise(Formation formation, Integer sessionEntrepriseId) {
+        Integer formationEntrepriseId = formation.getEntreprise() != null
+                ? formation.getEntreprise().getIdEntreprise()
+                : null;
+
+        if (formationEntrepriseId == null || !formationEntrepriseId.equals(sessionEntrepriseId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La formation sélectionnée appartient à une autre entreprise que celle choisie pour la session. " +
+                            "Veuillez changer la formation ou l'entreprise de la session.");
+        }
+    }
+
     private boolean currentUserIsAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
@@ -364,6 +456,18 @@ public class SessionFormationService {
         // Check if any granted authority equals "ADMIN" (exact match with DB role)
         for (GrantedAuthority authority : auth.getAuthorities()) {
             if ("ADMIN".equals(authority.getAuthority()) || "EQUIPMENT_MANAGER".equals(authority.getAuthority())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean currentUserIsAdminOnly() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+
+        for (GrantedAuthority authority : auth.getAuthorities()) {
+            if ("ADMIN".equals(authority.getAuthority())) {
                 return true;
             }
         }

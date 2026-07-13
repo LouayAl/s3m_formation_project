@@ -32,6 +32,9 @@ public class User {
     @Column(nullable = false)
     private String nom;
 
+    @Column(unique = true, nullable = false)
+    private String username;
+
     // 🔗 MANY USERS → ONE ENTREPRISE
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(

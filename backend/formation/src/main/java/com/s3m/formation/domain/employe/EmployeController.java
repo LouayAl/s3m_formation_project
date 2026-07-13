@@ -22,11 +22,14 @@ public class EmployeController {
 
     // =========================
     // GET ALL (kept for ParticipantsModal and other internal uses)
+    // Optional entrepriseId — only honored for ADMIN, ignored for everyone else.
     // =========================
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
-    public List<EmployeResponseDto> getAllEmployes() {
-        return employeService.getAllEmployes();
+    public List<EmployeResponseDto> getAllEmployes(
+            @RequestParam(required = false) Integer entrepriseId
+    ) {
+        return employeService.getAllEmployes(entrepriseId);
     }
 
     // =========================

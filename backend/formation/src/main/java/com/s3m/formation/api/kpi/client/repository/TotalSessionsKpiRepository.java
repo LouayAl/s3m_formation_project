@@ -17,7 +17,7 @@ public interface TotalSessionsKpiRepository extends JpaRepository<SessionFormati
     @Query(value = """
         SELECT COUNT(*) AS totalSessions
         FROM session_formation s
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     TotalSessionsProjection getTotalSessionsByClientAndYears(

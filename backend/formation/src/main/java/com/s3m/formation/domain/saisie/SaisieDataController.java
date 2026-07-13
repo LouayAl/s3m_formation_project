@@ -26,12 +26,16 @@ public class SaisieDataController {
 
     @GetMapping("/formations")
     public List<FormationResponseDto> getAllFormations() {
-        return formationService.getVisibleFormationsForCurrentUser();
+        // null = no admin entreprise-filter context here; behaves as before
+        // (scoped to caller's own entreprise via SecurityContextUtils).
+        return formationService.getVisibleFormationsForCurrentUser(null);
     }
 
     @GetMapping("/employes")
     public List<EmployeResponseDto> getAllEmployes() {
-        return employeService.getAllEmployes();
+        // null = no admin entreprise-filter context here; behaves as before
+        // (scoped to caller's own entreprise, or all if caller is ADMIN).
+        return employeService.getAllEmployes(null);
     }
 
     @GetMapping("/entreprises")

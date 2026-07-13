@@ -18,7 +18,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         FROM participation p
         JOIN employe e        ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY COALESCE(e.csp, 'Non renseigné')
     """, nativeQuery = true)
@@ -34,7 +34,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
     @Query("""
         SELECT COALESCE(e.fonction, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
-        WHERE e.entreprise.idEntreprise = :clientId
+        WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
         GROUP BY COALESCE(e.fonction, 'Non renseigné')
     """)
     List<RepartitionItemProjection> countByFonction(@Param("clientId") Integer clientId);
@@ -42,7 +42,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
     @Query("""
         SELECT COALESCE(e.typeContrat, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
-        WHERE e.entreprise.idEntreprise = :clientId
+        WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
         GROUP BY COALESCE(e.typeContrat, 'Non renseigné')
     """)
     List<RepartitionItemProjection> countByTypeContrat(@Param("clientId") Integer clientId);
@@ -50,7 +50,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
     @Query("""
         SELECT COALESCE(e.f_h, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
-        WHERE e.entreprise.idEntreprise = :clientId
+        WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
         GROUP BY COALESCE(e.f_h, 'Non renseigné')
     """)
     List<RepartitionItemProjection> countByGenre(@Param("clientId") Integer clientId);
@@ -67,7 +67,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         JOIN employe e           ON p.id_employe  = e.id_employe
         LEFT JOIN departement d  ON e.id_departement = d.id_departement
         JOIN session_formation s ON p.id_session  = s.id_session
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY d.nom, e.f_h
         ORDER BY d.nom, e.f_h
@@ -88,7 +88,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         FROM participation p
         JOIN employe e           ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY e.f_h
     """, nativeQuery = true)
@@ -111,7 +111,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         FROM participation p
         JOIN employe e           ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY
             CASE
@@ -131,7 +131,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         SELECT COUNT(DISTINCT p.id_employe) AS totalParticipants
         FROM participation p
         JOIN session_formation s ON p.id_session = s.id_session
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     TotalParticipantsKpiProjection getTotalParticipants(

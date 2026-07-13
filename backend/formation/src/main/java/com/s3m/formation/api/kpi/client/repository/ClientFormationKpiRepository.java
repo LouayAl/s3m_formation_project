@@ -15,7 +15,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
         FROM participation p
         JOIN session_formation s ON p.id_session  = s.id_session
         JOIN formation f         ON s.id_formation = f.id_formation
-        WHERE s.id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     TotalFormationHoursProjection getTotalFormationHours(
@@ -26,7 +26,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     @Query(value = """
         SELECT DISTINCT EXTRACT(YEAR FROM date_debut)::INT AS year
         FROM session_formation
-        WHERE id_entreprise = :clientId
+        WHERE (:clientId IS NULL OR id_entreprise = :clientId)
           AND date_debut IS NOT NULL
         ORDER BY year DESC
     """, nativeQuery = true)
@@ -43,7 +43,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM participation p
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
             GROUP BY mois, f.module
         ),
         top_per_month AS (
@@ -77,7 +77,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM participation p
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
               AND EXTRACT(YEAR FROM s.date_debut)::INT = :year
             GROUP BY mois, f.module
         ),
@@ -114,7 +114,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM participation p
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
               AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
             GROUP BY TO_CHAR(s.date_debut, 'Mon'), EXTRACT(MONTH FROM s.date_debut)::INT, f.module
         ),
@@ -151,7 +151,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
               AND s.date_debut IS NOT NULL
               AND TO_CHAR(s.date_debut, 'YYYY-MM') = :month
             GROUP BY DATE(s.date_debut), f.module, s.id_session, f.d_heures
@@ -194,7 +194,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
               AND s.date_debut IS NOT NULL
             GROUP BY annee, f.module, s.id_session, f.d_heures
         ),
@@ -235,7 +235,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
-            WHERE s.id_entreprise = :entrepriseId
+            WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
               AND s.date_debut IS NOT NULL
               AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
             GROUP BY annee, f.module, s.id_session, f.d_heures

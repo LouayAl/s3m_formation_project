@@ -18,8 +18,10 @@ public class FormationController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
-    public List<FormationResponseDto> getAllFormations() {
-        return formationService.getVisibleFormationsForCurrentUser();
+    public List<FormationResponseDto> getAllFormations(
+            @RequestParam(required = false) Integer entrepriseId // only used for ADMIN
+    ) {
+        return formationService.getVisibleFormationsForCurrentUser(entrepriseId);
     }
 
     @GetMapping("/{id}")

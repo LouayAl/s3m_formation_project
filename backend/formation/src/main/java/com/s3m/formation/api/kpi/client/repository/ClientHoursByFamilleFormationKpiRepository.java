@@ -30,7 +30,7 @@ public interface ClientHoursByFamilleFormationKpiRepository extends JpaRepositor
     FROM participation p
     JOIN session_formation s ON p.id_session = s.id_session
     JOIN formation f ON s.id_formation = f.id_formation
-    WHERE s.id_entreprise = :clientId
+    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
       AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     GROUP BY f.famille_formation
     ORDER BY totalHeures DESC

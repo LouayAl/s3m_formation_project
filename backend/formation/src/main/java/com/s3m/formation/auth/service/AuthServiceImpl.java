@@ -27,25 +27,19 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        // ✅ Normalize email
-        String email = request.email().trim().toLowerCase();
+        String identifier = request.identifier().trim().toLowerCase();
 
-        // ✅ Lookup user
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> {
-                    return new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found");
-                });
+        User user = userRepository.findByEmailOrUsername(identifier)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED, "Identifiant ou mot de passe incorrect"));
 
-        // ✅ Check password
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED, "Identifiant ou mot de passe incorrect");
         }
 
-
-        // ✅ Generate JWT
         String token = jwtUtils.generateToken(user);
 
-        // ✅ Return LoginResponse
         return new LoginResponse(
                 token,
                 user.getEmail(),
