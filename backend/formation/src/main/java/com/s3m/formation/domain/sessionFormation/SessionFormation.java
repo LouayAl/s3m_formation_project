@@ -8,7 +8,6 @@ import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.reservation.DemandeReservation;
 import jakarta.persistence.*;
 import lombok.*;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +21,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class SessionFormation {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_session")
@@ -68,22 +68,35 @@ public class SessionFormation {
     @Column(name = "lieu", length = 255)
     private String lieu;
 
-    @PrePersist
-    public void prePersist() {
-        if (this.statut == null) {
-            this.statut = SessionFormationStatut.PLANIFIEE;
-        }
-    }
-    // let's ignore this for now we don't want to work on reservations yet
+    /**
+     * Reservation linked to this session
+     */
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "id_demande",
             nullable = false,
             unique = true
     )
-
-
     private DemandeReservation demande;
+
+    /**
+     * Billing status
+     */
+    @Column(name = "session_facturee", nullable = false)
+    @Builder.Default
+    private Boolean sessionFacturee = false;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.statut == null) {
+            this.statut = SessionFormationStatut.PLANIFIEE;
+        }
+
+        if (this.sessionFacturee == null) {
+            this.sessionFacturee = false;
+        }
+    }
+
     public void demarrer(LocalDate today) {
 
         if (this.statut != SessionFormationStatut.PLANIFIEE) {
@@ -119,6 +132,7 @@ public class SessionFormation {
                     "La session doit être EN_COURS pour être terminée"
             );
         }
+
         this.statut = SessionFormationStatut.TERMINEE;
     }
 
@@ -128,7 +142,7 @@ public class SessionFormation {
                     "Une session terminée ne peut pas être annulée"
             );
         }
+
         this.statut = SessionFormationStatut.ANNULEE;
     }
-
 }

@@ -575,7 +575,8 @@ public class EMService {
                 s.getStatut(),
                 participants.size(),
                 participants,
-                s.getLieu()
+                s.getLieu(),
+                null
         );
     }
 }

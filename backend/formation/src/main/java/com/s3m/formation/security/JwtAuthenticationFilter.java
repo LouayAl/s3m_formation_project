@@ -26,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
 
     public JwtAuthenticationFilter(JwtUtils jwtUtils) {
+
         this.jwtUtils = jwtUtils;
     }
 
@@ -35,7 +36,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-
+        System.out.println(
+                request.getMethod() + " " + request.getRequestURI()
+        );
 
         String token = null;
 

@@ -21,7 +21,7 @@ public class BesoinFormationController {
     // entrepriseId param only has effect for ADMIN.
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<BesoinFormationResponseDto> getAll(
             @RequestParam(required = false) Integer entrepriseId
     ) {
@@ -29,7 +29,7 @@ public class BesoinFormationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public BesoinFormationResponseDto getById(@PathVariable Integer id) {
         return besoinFormationService.getBesoinById(id);
     }
@@ -39,19 +39,19 @@ public class BesoinFormationController {
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public BesoinFormationResponseDto create(@RequestBody BesoinFormationRequest request) {
         return besoinFormationService.createBesoin(request);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public BesoinFormationResponseDto update(@PathVariable Integer id, @RequestBody BesoinFormationRequest request) {
         return besoinFormationService.updateBesoin(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public void delete(@PathVariable Integer id) {
         besoinFormationService.deleteBesoin(id);
     }

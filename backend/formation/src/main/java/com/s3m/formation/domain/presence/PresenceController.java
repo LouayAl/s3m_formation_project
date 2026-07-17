@@ -23,7 +23,7 @@ public class PresenceController {
      * Returns all calendar days between dateDebut and dateFin for the session.
      */
     @GetMapping("/days")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public ResponseEntity<List<LocalDate>> getSessionDays(@PathVariable Integer sessionId) {
         return ResponseEntity.ok(service.getSessionDays(sessionId));
     }
@@ -33,7 +33,7 @@ public class PresenceController {
      * Returns dates that already have presence records saved.
      */
     @GetMapping("/recorded")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public ResponseEntity<PresenceDaysResponse> getRecordedDays(@PathVariable Integer sessionId) {
         return ResponseEntity.ok(service.getRecordedDays(sessionId));
     }
@@ -43,7 +43,7 @@ public class PresenceController {
      * Returns all participants with their presence status for a given day.
      */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public ResponseEntity<PresenceJourResponse> getPresenceForDay(
             @PathVariable Integer sessionId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate jour
@@ -57,7 +57,7 @@ public class PresenceController {
      * Body: { jour: "2025-01-15", presences: [{ participationId, present }] }
      */
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','ADMIN_FINANCE')")
     public ResponseEntity<PresenceJourResponse> savePresence(
             @PathVariable Integer sessionId,
             @RequestBody SavePresenceRequest req

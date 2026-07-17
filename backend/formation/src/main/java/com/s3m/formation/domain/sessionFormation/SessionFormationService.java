@@ -61,7 +61,7 @@ public class SessionFormationService {
 
     public List<SessionFormationResponseDto> getAllSessions(Integer requestedEntrepriseId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = currentUserIsAdminOnly()
+        Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
                 : (Integer) auth.getDetails();
 
@@ -79,15 +79,21 @@ public class SessionFormationService {
             Integer requestedEntrepriseId,
             String search,
             List<Integer> years,
+            List<SessionFormationStatut> statuts,
+            Boolean facture,
             int page,
             int size,
             String sortBy,
             String sortDir
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = currentUserIsAdminOnly()
+        Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
                 : (Integer) auth.getDetails();
+
+        // facture is a finance-only concept — never let it leak into or filter
+        // results for anyone who isn't ADMIN_FINANCE, even if a param sneaks in.
+        Boolean effectiveFacture = currentUserIsFinance() ? facture : null;
 
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir)
                 ? Sort.Direction.DESC
@@ -110,16 +116,17 @@ public class SessionFormationService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, mappedField));
 
-        List<Integer> yearsFilter = (years == null || years.isEmpty()) ? null : years;
+        List<Integer> yearsFilter  = (years == null || years.isEmpty()) ? null : years;
+        List<SessionFormationStatut> statutsFilter = (statuts == null || statuts.isEmpty()) ? null : statuts;
 
-        return repository.findPaginated(entrepriseId, search, yearsFilter, pageable)
+        return repository.findPaginated(entrepriseId, search, yearsFilter, statutsFilter, effectiveFacture, pageable)
                 .map(this::toDto);
     }
 
     // Distinct years available for the year-filter dropdown (scoped the same way as sessions).
     public List<Integer> getAvailableYears(Integer requestedEntrepriseId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = currentUserIsAdminOnly()
+        Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
                 : (Integer) auth.getDetails();
 
@@ -140,6 +147,15 @@ public class SessionFormationService {
     public SessionFormationResponseDto getSession(Integer sessionId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = (Integer) auth.getDetails();
+
+        // ADMIN_FINANCE (like ADMIN) isn't scoped to a single entreprise, so the
+        // ownership check below only applies to entreprise-scoped roles.
+        if (currentUserCanViewAllEntreprises()) {
+            return repository.findById(sessionId)
+                    .map(this::toDto)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND, "Session non trouvée"));
+        }
 
         return repository.findById(sessionId)
                 .filter(s -> s.getEntreprise() != null &&
@@ -311,6 +327,23 @@ public class SessionFormationService {
         auditTransition(session, avant, session.getStatut());
     }
 
+    /* =========================
+       FACTURATION (ADMIN_FINANCE only — enforced at the controller via
+       @PreAuthorize, this method assumes the caller already has the right)
+       ========================= */
+
+    public SessionFormationResponseDto toggleFacture(Integer sessionId) {
+        SessionFormation session = getSessionOrThrow(sessionId);
+        boolean current = Boolean.TRUE.equals(session.getSessionFacturee());
+        session.setSessionFacturee(!current);
+        SessionFormation saved = repository.save(session);
+        log.info("Session {} (id={}) marquée comme {} par {}",
+                saved.getReferenceSession(), saved.getIdSession(),
+                saved.getSessionFacturee() ? "facturée" : "non facturée",
+                SecurityContextHolder.getContext().getAuthentication().getName());
+        return toDto(saved);
+    }
+
     private SessionFormation getSessionOrThrow(Integer sessionId) {
         return repository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
@@ -363,6 +396,10 @@ public class SessionFormationService {
 
         int count = participants.size();
 
+        // Facturation is a finance-only concept — hidden (null) from everyone
+        // else, including ADMIN, per the agreed access rules.
+        Boolean factureForResponse = currentUserIsFinance() ? session.getSessionFacturee() : null;
+
         return new SessionFormationResponseDto(
                 session.getIdSession(),
                 session.getReferenceSession(),
@@ -381,7 +418,8 @@ public class SessionFormationService {
                 session.getStatut(),
                 count,
                 participants,
-                session.getLieu()
+                session.getLieu(),
+                factureForResponse
         );
     }
 
@@ -462,12 +500,33 @@ public class SessionFormationService {
         return false;
     }
 
-    private boolean currentUserIsAdminOnly() {
+    // Renamed from currentUserIsAdminOnly(): ADMIN_FINANCE also needs to browse
+    // and filter sessions across every entreprise (invoicing isn't scoped to
+    // one company), so it shares this "sees everything" gate with ADMIN —
+    // without gaining any of ADMIN's write permissions, which stay enforced
+    // separately at the controller level via @PreAuthorize.
+    private boolean currentUserCanViewAllEntreprises() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
 
         for (GrantedAuthority authority : auth.getAuthorities()) {
-            if ("ADMIN".equals(authority.getAuthority())) {
+            String a = authority.getAuthority();
+            if ("ADMIN".equals(a) || "ADMIN_FINANCE".equals(a)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Gate for the facture field specifically — ADMIN can view all sessions
+    // via currentUserCanViewAllEntreprises() above, but per the agreed rules
+    // ADMIN must NOT see or toggle facturation, so this is a separate check.
+    private boolean currentUserIsFinance() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+
+        for (GrantedAuthority authority : auth.getAuthorities()) {
+            if ("ADMIN_FINANCE".equals(authority.getAuthority())) {
                 return true;
             }
         }

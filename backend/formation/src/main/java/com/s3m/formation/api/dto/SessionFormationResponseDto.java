@@ -24,6 +24,7 @@ public record SessionFormationResponseDto(
         SessionFormationStatut statut,
         int participantsCount,
         List<ParticipantResponseDto> participants,
-        String lieu
+        String lieu,
+        Boolean facture              // ✅ new — only populated for ADMIN_FINANCE, null otherwise
 ) {
 }

@@ -17,19 +17,19 @@ public class EntrepriseController {
     private final EntrepriseService entrepriseService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<EntrepriseResponseDto> getAllEntreprises() {
         return entrepriseService.getAllEntreprises();
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public EntrepriseResponseDto getEntrepriseById(@PathVariable Integer id) {
         return entrepriseService.getEntrepriseById(id);
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<EntrepriseResponseDto> searchEntreprises(@RequestParam String keyword) {
         return entrepriseService.searchEntreprises(keyword);
     }
@@ -54,7 +54,7 @@ public class EntrepriseController {
 
     @PostMapping("/import")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','ADMIN_FINANCE')")
     public void importEntreprises(@RequestParam("file") MultipartFile file) {
         entrepriseService.importFromExcel(file);
     }

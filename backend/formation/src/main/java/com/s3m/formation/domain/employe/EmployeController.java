@@ -25,7 +25,7 @@ public class EmployeController {
     // Optional entrepriseId — only honored for ADMIN, ignored for everyone else.
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<EmployeResponseDto> getAllEmployes(
             @RequestParam(required = false) Integer entrepriseId
     ) {
@@ -37,7 +37,7 @@ public class EmployeController {
     // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public Page<EmployeResponseDto> getEmployesPaginated(
             @RequestParam(defaultValue = "0")         int page,
             @RequestParam(defaultValue = "20")        int size,
@@ -53,7 +53,7 @@ public class EmployeController {
     // GET BY ID
     // =========================
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
         return employeService.getEmployeById(id);
     }
@@ -71,7 +71,7 @@ public class EmployeController {
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER','ADMIN_FINANCE')")
     public EmployeResponseDto create(@RequestBody Employe employe) {
         return employeService.createEmploye(employe);
     }
@@ -80,7 +80,7 @@ public class EmployeController {
     // UPDATE
     // =========================
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER','ADMIN_FINANCE')")
     public EmployeResponseDto updateEmploye(@PathVariable Integer id, @RequestBody Employe employe) {
         return employeService.updateEmploye(id, employe);
     }
@@ -90,7 +90,7 @@ public class EmployeController {
     // =========================
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','TRAINER','ADMIN_FINANCE')")
     public void delete(@PathVariable Integer id) {
         employeService.deleteEmploye(id);
     }
@@ -99,7 +99,7 @@ public class EmployeController {
     // IMPORT EXCEL
     // =========================
     @PostMapping("/import")
-    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER','ADMIN_FINANCE')")
     public String importEmployesExcel(@RequestParam("file") MultipartFile file) {
         int imported = employeService.importFromExcel(file);
         return imported + " employés importés avec succès.";

@@ -17,7 +17,7 @@ public class FormationController {
     private final FormationService formationService;
 
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<FormationResponseDto> getAllFormations(
             @RequestParam(required = false) Integer entrepriseId // only used for ADMIN
     ) {
@@ -25,19 +25,19 @@ public class FormationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public FormationResponseDto getFormationById(@PathVariable Integer id) {
         return formationService.getFormationById(id);
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<FormationResponseDto> search(@RequestParam String keyword) {
         return formationService.searchFormations(keyword);
     }
 
     @GetMapping("/filter")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<FormationResponseDto> filter(
             @RequestParam(required = false) String module,
             @RequestParam(required = false) String famille,
@@ -48,20 +48,20 @@ public class FormationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','ADMIN_FINANCE')")
     public FormationResponseDto create(@RequestBody Formation formation) {
         return formationService.createFormation(formation);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','ADMIN_FINANCE')")
     public FormationResponseDto update(@PathVariable Integer id,
                                        @RequestBody Formation formation) {
         return formationService.updateFormation(id, formation);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','ADMIN_FINANCE')")
     public void delete(@PathVariable Integer id) {
         formationService.deleteFormation(id);
     }

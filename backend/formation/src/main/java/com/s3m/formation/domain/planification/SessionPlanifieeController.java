@@ -19,7 +19,7 @@ public class SessionPlanifieeController {
      * Returns all planned sessions for the year + monthly aggregations.
      */
     @GetMapping("/{annee}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','VISITOR')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','VISITOR','ADMIN_FINANCE')")
     public ResponseEntity<PlanificationAnnuelleResponse> getYear(
             @PathVariable int annee,
             @RequestParam Integer entrepriseId
@@ -33,7 +33,7 @@ public class SessionPlanifieeController {
      * Body: { entrepriseId, dateSession, count, dHeures, notes }
      */
     @PostMapping("/bulk")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public ResponseEntity<PlanificationAnnuelleResponse> bulkAdd(
             @RequestBody BulkAddRequest req
     ) {
@@ -45,7 +45,7 @@ public class SessionPlanifieeController {
      * Update a single planned session.
      */
     @PutMapping("/sessions/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public ResponseEntity<PlanificationAnnuelleResponse> update(
             @PathVariable Integer id,
             @RequestParam Integer entrepriseId,
@@ -59,7 +59,7 @@ public class SessionPlanifieeController {
      * Delete a single planned session.
      */
     @DeleteMapping("/sessions/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
     public ResponseEntity<Void> delete(
             @PathVariable Integer id,
             @RequestParam Integer entrepriseId

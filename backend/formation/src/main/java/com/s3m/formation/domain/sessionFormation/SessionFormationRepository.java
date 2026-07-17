@@ -141,6 +141,10 @@ public interface SessionFormationRepository
     // Note: no collection JOIN FETCH here (participations are lazy-loaded in the
     // service, same as the existing search() method) so Spring Data pagination
     // works correctly without the "in-memory pagination" warning.
+    //
+    // ✅ Extended with statuts (finance view: "En cours"/"Terminée" only) and
+    // facture (finance view: invoiced / not-yet-invoiced) filters. Both are
+    // optional — null/empty means "don't filter on this".
     @Query("""
         SELECT s
         FROM SessionFormation s
@@ -153,11 +157,15 @@ public interface SessionFormationRepository
                OR LOWER(f.module) LIKE LOWER(CONCAT('%', :search, '%'))
                OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', :search, '%')))
           AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
+          AND (:statuts IS NULL OR s.statut IN :statuts)
+          AND (:facture IS NULL OR s.sessionFacturee = :facture)
     """)
     Page<SessionFormation> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
             @Param("search") String search,
             @Param("years") List<Integer> years,
+            @Param("statuts") List<SessionFormationStatut> statuts,
+            @Param("facture") Boolean facture,
             Pageable pageable
     );
 
@@ -170,5 +178,9 @@ public interface SessionFormationRepository
           AND (:entrepriseId IS NULL OR s.entreprise.idEntreprise = :entrepriseId)
     """)
     List<LocalDate> findAllDateDebuts(@Param("entrepriseId") Integer entrepriseId);
+
+    // Used by SessionFormationStatusScheduler — avoids loading TERMINEE/ANNULEE
+    // sessions every night since they can never auto-transition further.
+    List<SessionFormation> findByStatutIn(List<SessionFormationStatut> statuts);
 
 }
