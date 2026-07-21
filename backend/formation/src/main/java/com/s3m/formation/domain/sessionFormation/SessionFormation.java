@@ -146,3 +146,4 @@ public class SessionFormation {
         this.statut = SessionFormationStatut.ANNULEE;
     }
 }
+

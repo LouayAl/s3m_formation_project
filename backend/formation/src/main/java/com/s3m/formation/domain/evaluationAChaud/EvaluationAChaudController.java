@@ -88,16 +88,19 @@ public class EvaluationAChaudController {
 
     // ── EXPORTS ──────────────────────────────────────────────────────────────
 
-    @GetMapping("/api/evaluation-a-chaud/session/{sessionId}/export/pdf")
-    public ResponseEntity<byte[]> exportPdf(@PathVariable Integer sessionId) {
-        byte[] pdf = service.exportPdf(sessionId);
+    public record ExportPdfRequest(String barChartImage) {} // base64 PNG, no "data:image/png;base64," prefix
+
+    @PostMapping("/api/evaluation-a-chaud/session/{sessionId}/export/pdf")
+    public ResponseEntity<byte[]> exportPdf(
+            @PathVariable Integer sessionId,
+            @RequestBody ExportPdfRequest request) {
+        byte[] pdf = service.exportPdf(sessionId, request.barChartImage());
         EvaluationAChaudStatsDto stats = service.getStats(sessionId);
         String filename = buildFilename(stats.referenceSession(), stats.moduleFormation(), "pdf");
 
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + filename + "\"")  // ← Simple, ASCII-only
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(pdf);
     }
 

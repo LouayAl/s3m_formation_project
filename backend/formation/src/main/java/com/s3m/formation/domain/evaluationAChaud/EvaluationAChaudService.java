@@ -1,15 +1,6 @@
 package com.s3m.formation.domain.evaluationAChaud;
 
-import com.lowagie.text.Chunk;
-import com.lowagie.text.Document;
-import com.lowagie.text.DocumentException;
-import com.lowagie.text.Element;
-import com.lowagie.text.Font;
-import com.lowagie.text.FontFactory;
-import com.lowagie.text.PageSize;
-import com.lowagie.text.Paragraph;
-import com.lowagie.text.Phrase;
-import com.lowagie.text.Rectangle;
+import com.lowagie.text.*;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
@@ -456,132 +447,108 @@ public class EvaluationAChaudService {
        ========================================================= */
 
     @Transactional(readOnly = true)
-    public byte[] exportPdf(Integer sessionId) {
+    public byte[] exportPdf(Integer sessionId, String barChartImageBase64) {
         SessionFormation session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
         EvaluationAChaudStatsDto stats = getStats(sessionId);
+        SatisfactionKpiDto kpis = getSatisfactionKpis(sessionId);
 
-        Color brandDark = new Color(26, 26, 46);   // matches #1a1a2e used in the frontend
-        Color brandBlue = new Color(25, 118, 210);  // matches #1976d2
+        Color brandDark  = new Color(154, 157, 158);
+        Color brandBlue  = new Color(25, 118, 210);
+        Color brandGreen = new Color(102, 187, 106);
+        Color rowTint    = new Color(230, 236, 245);
+        Color brandOrange = new Color(255, 152, 0);
 
-        Font titleFont   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, Color.WHITE);
-        Font sectionFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 13, Color.WHITE);
-        Font labelFont   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, Color.DARK_GRAY);
-        Font valueFont   = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.BLACK);
-        Font tableHeader = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 9, Color.WHITE);
-        Font tableBody   = FontFactory.getFont(FontFactory.HELVETICA, 9, Color.BLACK);
-        Font smallGray   = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.GRAY);
+
+        Font titleFont     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15, Color.WHITE);
+        Font subtitleFont  = FontFactory.getFont(FontFactory.HELVETICA, 10, Color.WHITE);
+        Font labelFont     = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 8, Color.DARK_GRAY);
+        Font valueFont     = FontFactory.getFont(FontFactory.HELVETICA, 8, Color.BLACK);
+        Font kpiValueFont  = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 15, Color.WHITE);
+        Font kpiLabelFont  = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.WHITE);
+        Font tableHeader   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7, Color.WHITE);
+        Font tableBody     = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.BLACK);
+        Font moyenneFont   = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 7, brandDark);
+        Font smallGray     = FontFactory.getFont(FontFactory.HELVETICA, 7, Color.GRAY);
 
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            Document doc = new Document(PageSize.A4, 36, 36, 36, 36);
+            Document doc = new Document(PageSize.A4.rotate(), 24, 24, 18, 18);
             PdfWriter.getInstance(doc, out);
             doc.open();
 
-            // ---- Header band ----
-            PdfPTable headerTable = new PdfPTable(1);
+            // ---- Header band with logo ----
+            PdfPTable headerTable = new PdfPTable(2);
             headerTable.setWidthPercentage(100);
-            PdfPCell headerCell = new PdfPCell();
-            headerCell.setBackgroundColor(brandDark);
-            headerCell.setPadding(14);
-            headerCell.setBorder(Rectangle.NO_BORDER);
-            Paragraph title = new Paragraph("Rapport d'évaluation à chaud", titleFont);
-            Paragraph subtitle = new Paragraph(stats.moduleFormation(),
-                    FontFactory.getFont(FontFactory.HELVETICA, 12, Color.WHITE));
-            headerCell.addElement(title);
-            headerCell.addElement(subtitle);
-            headerTable.addCell(headerCell);
+            headerTable.setWidths(new float[]{5f, 1f});
+
+            PdfPCell headerTextCell = new PdfPCell();
+            headerTextCell.setBackgroundColor(brandDark);
+            headerTextCell.setPadding(10);
+            headerTextCell.setBorder(Rectangle.NO_BORDER);
+            headerTextCell.addElement(new Paragraph("Rapport d'évaluation à chaud", titleFont));
+            headerTextCell.addElement(new Paragraph(stats.moduleFormation(), subtitleFont));
+            headerTable.addCell(headerTextCell);
+
+            PdfPCell logoCell = new PdfPCell();
+            logoCell.setBackgroundColor(brandDark);
+            logoCell.setBorder(Rectangle.NO_BORDER);
+            logoCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+            logoCell.setVerticalAlignment(Element.ALIGN_MIDDLE);
+            try (var logoStream = getClass().getResourceAsStream("/static/logo.png")) {
+                if (logoStream != null) {
+                    Image logo = Image.getInstance(logoStream.readAllBytes());
+                    logo.scaleToFit(100, 46);
+                    logoCell.addElement(logo);
+                }
+            } catch (Exception ignored) {
+                // logo missing/unreadable — report still generates without it
+            }
+            headerTable.addCell(logoCell);
             doc.add(headerTable);
-            doc.add(Chunk.NEWLINE);
+            doc.add(new Paragraph(" ", valueFont));
 
-            // ---- Session info block ----
-            PdfPTable infoTable = new PdfPTable(2);
+            // ---- Compact session info row ----
+            PdfPTable infoTable = new PdfPTable(6);
             infoTable.setWidthPercentage(100);
-            infoTable.setWidths(new float[]{1f, 2f});
-
-            addInfoRow(infoTable, "Référence session", stats.referenceSession(), labelFont, valueFont);
-            addInfoRow(infoTable, "Formateur", stats.formateur(), labelFont, valueFont);
-            addInfoRow(infoTable, "Entreprise",
+            addCompactInfo(infoTable, "Référence", stats.referenceSession(), labelFont, valueFont);
+            addCompactInfo(infoTable, "Formateur", stats.formateur(), labelFont, valueFont);
+            addCompactInfo(infoTable, "Entreprise",
                     session.getEntreprise() != null ? session.getEntreprise().getNomEntreprise() : "—",
                     labelFont, valueFont);
-            addInfoRow(infoTable, "Dates",
+            addCompactInfo(infoTable, "Dates",
                     formatDateRange(session.getDateDebut(), session.getDateFin()), labelFont, valueFont);
-            addInfoRow(infoTable, "Lieu", session.getLieu() != null ? session.getLieu() : "—",
-                    labelFont, valueFont);
-            addInfoRow(infoTable, "Participants / Réponses",
+            addCompactInfo(infoTable, "Lieu",
+                    session.getLieu() != null ? session.getLieu() : "—", labelFont, valueFont);
+            addCompactInfo(infoTable, "Réponses",
                     stats.totalReponses() + " / " + stats.totalParticipants(), labelFont, valueFont);
-
             doc.add(infoTable);
-            doc.add(Chunk.NEWLINE);
+            doc.add(new Paragraph(" ", valueFont));
 
-            // ---- Global score banner ----
-            PdfPTable scoreTable = new PdfPTable(1);
-            scoreTable.setWidthPercentage(100);
-            PdfPCell scoreCell = new PdfPCell();
-            scoreCell.setBackgroundColor(brandBlue);
-            scoreCell.setPadding(12);
-            scoreCell.setBorder(Rectangle.NO_BORDER);
-            scoreCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-            Paragraph scoreText = new Paragraph(
-                    "Moyenne globale : " + stats.moyenneGlobale() + " / 4",
-                    FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, Color.WHITE));
-            scoreText.setAlignment(Element.ALIGN_CENTER);
-            scoreCell.addElement(scoreText);
-            scoreTable.addCell(scoreCell);
-            doc.add(scoreTable);
-            doc.add(Chunk.NEWLINE);
+            // ---- KPI benchmark banner ----
+            PdfPTable kpiTable = new PdfPTable(4);
+            kpiTable.setWidthPercentage(100);
+            addKpiCell(kpiTable, "Moyenne globale (session)", stats.moyenneGlobale(), brandDark, kpiValueFont, kpiLabelFont);
+            addKpiCell(kpiTable, "Client (toutes formations)", kpis.satisfactionClientGlobale(), brandGreen, kpiValueFont, kpiLabelFont);
+            addKpiCell(kpiTable, "Formation (client)", kpis.satisfactionParFormation(), brandOrange, kpiValueFont, kpiLabelFont);
+            addKpiCell(kpiTable, "Cette session", kpis.satisfactionSession(), brandBlue, kpiValueFont, kpiLabelFont);
+            doc.add(kpiTable);
+            doc.add(new Paragraph(" ", valueFont));
 
-            // ---- Per-section question tables ----
-            for (FormulaireConstants.Section section : FormulaireConstants.SECTIONS) {
-                PdfPTable sectionHeader = new PdfPTable(1);
-                sectionHeader.setWidthPercentage(100);
-                PdfPCell sectionCell = new PdfPCell(new Phrase(section.fr(), sectionFont));
-                sectionCell.setBackgroundColor(brandDark);
-                sectionCell.setPadding(8);
-                sectionCell.setBorder(Rectangle.NO_BORDER);
-                sectionHeader.addCell(sectionCell);
-                doc.add(sectionHeader);
-
-                PdfPTable qTable = new PdfPTable(2);
-                qTable.setWidthPercentage(100);
-                qTable.setWidths(new float[]{3f, 1f});
-
-                PdfPCell qHeadCell1 = new PdfPCell(new Phrase("Question", tableHeader));
-                PdfPCell qHeadCell2 = new PdfPCell(new Phrase("Moyenne", tableHeader));
-                styleHeaderCell(qHeadCell1, brandBlue);
-                styleHeaderCell(qHeadCell2, brandBlue);
-                qTable.addCell(qHeadCell1);
-                qTable.addCell(qHeadCell2);
-
-                FormulaireConstants.QUESTIONS.stream()
-                        .filter(q -> q.sectionId() == section.id())
-                        .forEach(q -> {
-                            Double avg = stats.moyennesParQuestion().get(q.id());
-                            qTable.addCell(new PdfPCell(new Phrase(q.fr(), tableBody)) {{
-                                setPadding(6);
-                            }});
-                            PdfPCell avgCell = new PdfPCell(
-                                    new Phrase((avg != null ? avg : 0) + " / 4", tableBody));
-                            avgCell.setPadding(6);
-                            avgCell.setHorizontalAlignment(Element.ALIGN_CENTER);
-                            qTable.addCell(avgCell);
-                        });
-
-                doc.add(qTable);
-                doc.add(Chunk.NEWLINE);
+            // ---- Score par question chart (rendered by frontend, embedded here) ----
+            if (barChartImageBase64 != null && !barChartImageBase64.isBlank()) {
+                try {
+                    byte[] chartBytes = java.util.Base64.getDecoder().decode(barChartImageBase64);
+                    Image chartImage = Image.getInstance(chartBytes);
+                    chartImage.scaleToFit(760, 150);
+                    chartImage.setAlignment(Element.ALIGN_CENTER);
+                    doc.add(chartImage);
+                    doc.add(new Paragraph(" ", valueFont));
+                } catch (Exception ignored) {
+                    // bad/missing image — report still generates without the chart
+                }
             }
 
-            // ---- Detailed responses table ----
-            doc.newPage();
-            PdfPTable detailHeaderBand = new PdfPTable(1);
-            detailHeaderBand.setWidthPercentage(100);
-            PdfPCell detailHeaderCell = new PdfPCell(new Phrase("Détail par participant", sectionFont));
-            detailHeaderCell.setBackgroundColor(brandDark);
-            detailHeaderCell.setPadding(8);
-            detailHeaderCell.setBorder(Rectangle.NO_BORDER);
-            detailHeaderBand.addCell(detailHeaderCell);
-            doc.add(detailHeaderBand);
-            doc.add(Chunk.NEWLINE);
-
+            // ---- Full detail grid: moyenne row + one row per participant ----
             int nbQuestions = FormulaireConstants.QUESTIONS.size();
             PdfPTable detailTable = new PdfPTable(nbQuestions + 1);
             detailTable.setWidthPercentage(100);
@@ -599,55 +566,42 @@ public class EvaluationAChaudService {
                 detailTable.addCell(qHead);
             }
 
+            PdfPCell moyenneLabelCell = new PdfPCell(new Phrase("Moyenne", moyenneFont));
+            moyenneLabelCell.setBackgroundColor(rowTint);
+            moyenneLabelCell.setPadding(4);
+            detailTable.addCell(moyenneLabelCell);
+            for (FormulaireConstants.Question q : FormulaireConstants.QUESTIONS) {
+                Double avg = stats.moyennesParQuestion().get(q.id());
+                PdfPCell avgCell = new PdfPCell(new Phrase(avg != null ? String.valueOf(avg) : "—", moyenneFont));
+                avgCell.setBackgroundColor(rowTint);
+                avgCell.setPadding(4);
+                avgCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                detailTable.addCell(avgCell);
+            }
+
             for (EvaluationAChaudResponseDto resp : stats.reponses()) {
                 PdfPCell nameCell = new PdfPCell(new Phrase(resp.nomEmploye(), tableBody));
-                nameCell.setPadding(5);
+                nameCell.setPadding(4);
                 detailTable.addCell(nameCell);
                 for (FormulaireConstants.Question q : FormulaireConstants.QUESTIONS) {
                     Integer score = resp.reponses().stream()
                             .filter(rep -> rep.idQuestion() == q.id())
                             .map(EvaluationReponseDto::score)
                             .findFirst().orElse(null);
-                    PdfPCell scoreCell2 = new PdfPCell(
+                    PdfPCell scoreCell = new PdfPCell(
                             new Phrase(score != null ? String.valueOf(score) : "—", tableBody));
-                    scoreCell2.setPadding(5);
-                    scoreCell2.setHorizontalAlignment(Element.ALIGN_CENTER);
-                    detailTable.addCell(scoreCell2);
+                    scoreCell.setPadding(4);
+                    scoreCell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                    detailTable.addCell(scoreCell);
                 }
             }
             doc.add(detailTable);
-            doc.add(Chunk.NEWLINE);
-
-            // ---- Free comments ----
-            List<EvaluationAChaudResponseDto> withComments = stats.reponses().stream()
-                    .filter(resp -> resp.commentaire() != null && !resp.commentaire().isBlank())
-                    .toList();
-
-            if (!withComments.isEmpty()) {
-                PdfPTable commentsHeaderBand = new PdfPTable(1);
-                commentsHeaderBand.setWidthPercentage(100);
-                PdfPCell commentsHeaderCell = new PdfPCell(new Phrase("Commentaires libres", sectionFont));
-                commentsHeaderCell.setBackgroundColor(brandDark);
-                commentsHeaderCell.setPadding(8);
-                commentsHeaderCell.setBorder(Rectangle.NO_BORDER);
-                commentsHeaderBand.addCell(commentsHeaderCell);
-                doc.add(commentsHeaderBand);
-                doc.add(Chunk.NEWLINE);
-
-                for (EvaluationAChaudResponseDto resp : withComments) {
-                    Paragraph author = new Paragraph(resp.nomEmploye(), labelFont);
-                    Paragraph comment = new Paragraph(resp.commentaire(), valueFont);
-                    comment.setSpacingAfter(10);
-                    doc.add(author);
-                    doc.add(comment);
-                }
-            }
 
             // ---- Footer ----
-            doc.add(Chunk.NEWLINE);
             Paragraph footer = new Paragraph(
                     "Généré le " + LocalDateTime.now().format(DATETIME_FMT), smallGray);
             footer.setAlignment(Element.ALIGN_RIGHT);
+            footer.setSpacingBefore(6);
             doc.add(footer);
 
             doc.close();
@@ -658,6 +612,29 @@ public class EvaluationAChaudService {
         }
     }
 
+    private void addCompactInfo(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setPadding(4);
+        cell.addElement(new Paragraph(label, labelFont));
+        cell.addElement(new Paragraph(value != null ? value : "—", valueFont));
+        table.addCell(cell);
+    }
+
+    private void addKpiCell(PdfPTable table, String label, double score, Color bg, Font valueFont, Font labelFont) {
+        PdfPCell cell = new PdfPCell();
+        cell.setBackgroundColor(bg);
+        cell.setPadding(8);
+        cell.setBorder(Rectangle.NO_BORDER);
+        cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+        Paragraph value = new Paragraph(score + " / 4", valueFont);
+        value.setAlignment(Element.ALIGN_CENTER);
+        Paragraph label2 = new Paragraph(label, labelFont);
+        label2.setAlignment(Element.ALIGN_CENTER);
+        cell.addElement(value);
+        cell.addElement(label2);
+        table.addCell(cell);
+    }
     private void addInfoRow(PdfPTable table, String label, String value, Font labelFont, Font valueFont) {
         PdfPCell labelCell = new PdfPCell(new Phrase(label, labelFont));
         labelCell.setBorder(Rectangle.BOTTOM);
