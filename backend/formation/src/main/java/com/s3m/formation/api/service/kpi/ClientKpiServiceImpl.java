@@ -3,11 +3,15 @@ package com.s3m.formation.api.service.kpi;
 import com.s3m.formation.api.kpi.client.dto.*;
 import com.s3m.formation.api.kpi.client.projection.*;
 import com.s3m.formation.api.kpi.client.repository.*;
+import com.s3m.formation.domain.sessionFormation.SessionFormation;
+import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import lombok.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,6 +30,8 @@ public class ClientKpiServiceImpl implements ClientKpiService {
     private final ClientHoursByFamilleFormationKpiRepository hoursFamilleRepo;
     private final ClientFormationKpiRepository formationRepo;
     private final TotalSessionsKpiRepository totalSessionsRepo;
+    private final SessionFormationRepository sessionFormationRepository;
+
 
     @Override
     public ClientKpiResponse getClientKpis(Integer clientId, Integer[] years) {
@@ -117,6 +123,47 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 totalFormationHours,
                 totalSessions
         );
+    }
+
+    @Override
+    public VisibiliteKpiDto getVisibiliteKpis(Integer clientId, LocalDate start, LocalDate end) {
+        List<SessionFormation> sessions = sessionFormationRepository
+                .findByStatutAndDateDebutBetweenAndEntreprise(
+                        SessionFormationStatut.PLANIFIEE, start, end, clientId);
+
+        long nbSessions = sessions.size();
+        long nbZero = sessions.stream()
+                .filter(s -> s.getParticipations() == null || s.getParticipations().isEmpty())
+                .count();
+        double moyenne = nbSessions > 0
+                ? sessions.stream()
+                .mapToInt(s -> s.getParticipations() != null ? s.getParticipations().size() : 0)
+                .average().orElse(0)
+                : 0;
+        moyenne = Math.round(moyenne * 10.0) / 10.0;
+
+        return new VisibiliteKpiDto(nbSessions, moyenne, nbZero);
+    }
+
+    @Override
+    public List<VisibiliteSessionDto> getVisibiliteSessions(Integer clientId, LocalDate start, LocalDate end) {
+        return sessionFormationRepository
+                .findByStatutAndDateDebutBetweenAndEntreprise(
+                        SessionFormationStatut.PLANIFIEE, start, end, clientId)
+                .stream()
+                .map(s -> new VisibiliteSessionDto(
+                        s.getIdSession(),
+                        s.getReferenceSession(),
+                        s.getFormation() != null ? s.getFormation().getModule() : "—",
+                        s.getFormateur() != null
+                                ? s.getFormateur().getNom() + " " + s.getFormateur().getPrenom() : "—",
+                        s.getEntreprise() != null ? s.getEntreprise().getNomEntreprise() : "—",
+                        s.getDateDebut(),
+                        s.getDateFin(),
+                        s.getLieu(),
+                        s.getParticipations() != null ? s.getParticipations().size() : 0
+                ))
+                .toList();
     }
 
     private Integer[] resolveYears(Integer clientId, Integer[] years) {

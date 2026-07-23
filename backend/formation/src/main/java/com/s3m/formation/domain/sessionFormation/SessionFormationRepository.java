@@ -183,4 +183,26 @@ public interface SessionFormationRepository
     // sessions every night since they can never auto-transition further.
     List<SessionFormation> findByStatutIn(List<SessionFormationStatut> statuts);
 
+    @Query("""
+        SELECT DISTINCT s
+        FROM SessionFormation s
+        JOIN FETCH s.formation f
+        LEFT JOIN FETCH s.formateur fo
+        LEFT JOIN FETCH s.entreprise e
+        WHERE s.statut = :statut
+          AND s.dateDebut >= :start
+          AND s.dateDebut <= :end
+          AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+        ORDER BY s.dateDebut ASC
+    """)
+    List<SessionFormation> findByStatutAndDateDebutBetweenAndEntreprise(
+            @Param("statut") SessionFormationStatut statut,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("entrepriseId") Integer entrepriseId
+    );
+
+    boolean existsByFormateur_IdFormateur(Integer idFormateur);
+
+
 }

@@ -2,6 +2,8 @@ package com.s3m.formation.api.controller;
 
 import com.s3m.formation.api.kpi.client.dto.ClientKpiResponse;
 import com.s3m.formation.api.kpi.client.dto.TotalGrowthKpiDto;
+import com.s3m.formation.api.kpi.client.dto.VisibiliteKpiDto;
+import com.s3m.formation.api.kpi.client.dto.VisibiliteSessionDto;
 import com.s3m.formation.api.service.kpi.ClientKpiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -10,6 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -93,4 +96,45 @@ public class ClientKpiController {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(null, period, month, toYearsArray(years)));
     }
+
+
+    @GetMapping("/clients/{clientId}/kpis/visibilite")
+    public ResponseEntity<VisibiliteKpiDto> getVisibiliteKpis(
+            @PathVariable Integer clientId,
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getVisibiliteKpis(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+    }
+
+    @GetMapping("/clients/{clientId}/kpis/visibilite/sessions")
+    public ResponseEntity<List<VisibiliteSessionDto>> getVisibiliteSessions(
+            @PathVariable Integer clientId,
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getVisibiliteSessions(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+    }
+
+    @GetMapping("/admin/kpis/visibilite")
+    public ResponseEntity<VisibiliteKpiDto> getAdminVisibiliteKpis(
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getVisibiliteKpis(null, LocalDate.parse(start), LocalDate.parse(end)));
+    }
+
+    @GetMapping("/admin/kpis/visibilite/sessions")
+    public ResponseEntity<List<VisibiliteSessionDto>> getAdminVisibiliteSessions(
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getVisibiliteSessions(null, LocalDate.parse(start), LocalDate.parse(end)));
+    }
+
+
 }
