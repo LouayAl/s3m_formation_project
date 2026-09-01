@@ -18,8 +18,8 @@ public class EntrepriseController {
 
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
-    public List<EntrepriseResponseDto> getAllEntreprises() {
-        return entrepriseService.getAllEntreprises();
+    public List<EntrepriseResponseDto> getAllEntreprises(@RequestParam(required = false) TypeEntreprise type) {
+        return entrepriseService.getEntreprises(type);
     }
 
     @GetMapping("/{id}")
@@ -58,5 +58,7 @@ public class EntrepriseController {
     public void importEntreprises(@RequestParam("file") MultipartFile file) {
         entrepriseService.importFromExcel(file);
     }
+
+
 
 }

@@ -2,13 +2,16 @@ package com.s3m.formation.domain.formation;
 
 import com.s3m.formation.api.dto.FormationResponseDto;
 import com.s3m.formation.domain.entreprise.Entreprise;
+import com.s3m.formation.domain.entreprise.EntrepriseRepository;
+import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.Authentication;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import jakarta.persistence.EntityManager;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
@@ -16,7 +19,8 @@ import java.util.List;
 public class FormationService {
 
     private final FormationRepository formationRepository;
-    private final EntityManager entityManager;
+    private final EntrepriseRepository entrepriseRepository;
+    private final SessionFormationRepository sessionFormationRepository;
     // =========================
     // GET ALL (SCOPED, ADMIN CAN FILTER)
     // =========================
@@ -91,11 +95,15 @@ public class FormationService {
     // CREATE
     // =========================
     public FormationResponseDto createFormation(Formation formation) {
-        Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
-
-        formation.setEntreprise(
-                entityManager.getReference(Entreprise.class, entrepriseId)
-        );
+        if (currentUserIsAdminOnly()) {
+            formation.setEntreprise(getRequestedEntreprise(formation));
+        } else {
+            Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
+            if (entrepriseId == null) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Entreprise de l'utilisateur introuvable");
+            }
+            formation.setEntreprise(getEntreprise(entrepriseId));
+        }
 
         // force override
         formation.setIdFormation(null);
@@ -130,7 +138,36 @@ public class FormationService {
         formation.setPrixHeureMad(updated.getPrixHeureMad());
         formation.setPrixJourMad(updated.getPrixJourMad());
 
+        if (currentUserIsAdminOnly() && updated.getEntreprise() != null
+                && updated.getEntreprise().getIdEntreprise() != null) {
+            Integer requestedEntrepriseId = updated.getEntreprise().getIdEntreprise();
+            Integer currentEntrepriseId = formation.getEntreprise().getIdEntreprise();
+
+            if (!currentEntrepriseId.equals(requestedEntrepriseId)) {
+                if (sessionFormationRepository.existsByFormation_IdFormation(id)) {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT,
+                            "Impossible de modifier l'entreprise : cette formation possède déjà des sessions."
+                    );
+                }
+                formation.setEntreprise(getEntreprise(requestedEntrepriseId));
+            }
+        }
+
         return toDto(formationRepository.save(formation));
+    }
+
+    private Entreprise getRequestedEntreprise(Formation formation) {
+        if (formation.getEntreprise() == null || formation.getEntreprise().getIdEntreprise() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Veuillez sélectionner une entreprise.");
+        }
+        return getEntreprise(formation.getEntreprise().getIdEntreprise());
+    }
+
+    private Entreprise getEntreprise(Integer entrepriseId) {
+        return entrepriseRepository.findById(entrepriseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Entreprise introuvable : " + entrepriseId));
     }
 
     // =========================

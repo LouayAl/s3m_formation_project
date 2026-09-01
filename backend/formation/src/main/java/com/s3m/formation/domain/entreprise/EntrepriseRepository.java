@@ -21,4 +21,6 @@ public interface EntrepriseRepository
     Optional<Entreprise> findByNomEntreprise(String nomEntreprise);
     Optional<Entreprise> findByNomEntrepriseIgnoreCase(String nom);
 
+    List<Entreprise> findByTypeEntreprise(TypeEntreprise type);
+
 }

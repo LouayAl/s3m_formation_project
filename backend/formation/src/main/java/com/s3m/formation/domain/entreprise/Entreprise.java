@@ -24,4 +24,9 @@ public class Entreprise {
 
     @OneToMany(mappedBy = "entreprise", fetch = FetchType.LAZY)
     private List<Formateur> formateurs;
+
+    @Column(name = "type_entreprise", nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    private TypeEntreprise typeEntreprise;
+
 }

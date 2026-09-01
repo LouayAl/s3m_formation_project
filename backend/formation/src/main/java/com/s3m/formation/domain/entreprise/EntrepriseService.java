@@ -47,6 +47,13 @@ public class EntrepriseService {
         return toDto(e);
     }
 
+    public List<EntrepriseResponseDto> getEntreprises(TypeEntreprise type) {
+        List<Entreprise> entreprises = (type != null)
+                ? entrepriseRepository.findByTypeEntreprise(type)
+                : entrepriseRepository.findAll();
+        return entreprises.stream().map(this::toDto).toList();
+    }
+
     // Search entreprises by name
     public List<EntrepriseResponseDto> searchEntreprises(String keyword) {
         return entrepriseRepository.search(keyword)
@@ -57,6 +64,9 @@ public class EntrepriseService {
 
     // Create entreprise
     public EntrepriseResponseDto createEntreprise(Entreprise entreprise) {
+        if (entreprise.getTypeEntreprise() == null) {
+            entreprise.setTypeEntreprise(TypeEntreprise.AUTRE);
+        }
         Entreprise saved = entrepriseRepository.save(entreprise);
         return toDto(saved);
     }
@@ -124,6 +134,7 @@ public class EntrepriseService {
 
                 Entreprise entreprise = new Entreprise();
                 entreprise.setNomEntreprise(nomEntreprise);
+                entreprise.setTypeEntreprise(TypeEntreprise.AUTRE);
                 entreprisesToSave.add(entreprise);
             }
 
@@ -144,7 +155,8 @@ public class EntrepriseService {
     private EntrepriseResponseDto toDto(Entreprise entreprise) {
         return new EntrepriseResponseDto(
                 entreprise.getIdEntreprise(),
-                entreprise.getNomEntreprise()
+                entreprise.getNomEntreprise(),
+                entreprise.getTypeEntreprise()
         );
     }
 
