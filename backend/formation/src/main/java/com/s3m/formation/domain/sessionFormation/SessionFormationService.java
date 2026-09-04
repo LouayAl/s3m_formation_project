@@ -84,20 +84,19 @@ public class SessionFormationService {
             int page,
             int size,
             String sortBy,
-            String sortDir
+            String sortDir,
+            String filterField,   // ← add
+            String filterValue    // ← add
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
                 : (Integer) auth.getDetails();
 
-        // facture is a finance-only concept — never let it leak into or filter
-        // results for anyone who isn't ADMIN_FINANCE, even if a param sneaks in.
         Boolean effectiveFacture = currentUserIsFinance() ? facture : null;
 
         Sort.Direction direction = "desc".equalsIgnoreCase(sortDir)
-                ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
 
         String mappedField = switch (sortBy) {
             case "formation"           -> "formation.module";
@@ -119,8 +118,15 @@ public class SessionFormationService {
         List<Integer> yearsFilter  = (years == null || years.isEmpty()) ? null : years;
         List<SessionFormationStatut> statutsFilter = (statuts == null || statuts.isEmpty()) ? null : statuts;
 
-        return repository.findPaginated(entrepriseId, search, yearsFilter, statutsFilter, effectiveFacture, pageable)
-                .map(this::toDto);
+        // Normalize column filter — both must be present or neither applies
+        String colField  = (filterField != null && !filterField.isBlank()) ? filterField : null;
+        String colFilter = (filterValue != null && !filterValue.isBlank()) ? filterValue : null;
+        if (colField == null || colFilter == null) { colField = null; colFilter = null; }
+
+        return repository.findPaginated(
+                entrepriseId, search, yearsFilter, statutsFilter,
+                effectiveFacture, colField, colFilter, pageable
+        ).map(this::toDto);
     }
 
     // Distinct years available for the year-filter dropdown (scoped the same way as sessions).

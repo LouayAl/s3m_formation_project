@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
-import java.util.Map;
 
 @Component
 public class JwtUtils {
@@ -36,24 +35,27 @@ public class JwtUtils {
     }
 
     public String generateToken(User user) {
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .setSubject(user.getEmail())
                 .claim("role", user.getRole())
                 .claim("entrepriseId", user.getEntreprise().getIdEntreprise())
                 .claim("prenom", user.getPrenom())
-                .claim("nom", user.getNom())
+                .claim("nom", user.getNom());
+
+        if (user.getDepartement() != null) {
+            builder.claim("departementId", user.getDepartement().getId());
+        }
+
+        return builder
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-
     public String generateTokenFromEmail(String email) {
         return Jwts.builder()
                 .setSubject(email)
-                // Optionally, add default claims if you want
-                //.claim("role", "ADMIN") // or fetch role dynamically
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
                 .signWith(signingKey(), SignatureAlgorithm.HS256)

@@ -5,6 +5,7 @@ import com.s3m.formation.api.kpi.client.dto.TotalGrowthKpiDto;
 import com.s3m.formation.api.kpi.client.dto.VisibiliteKpiDto;
 import com.s3m.formation.api.kpi.client.dto.VisibiliteSessionDto;
 import com.s3m.formation.api.service.kpi.ClientKpiService;
+import com.s3m.formation.security.util.AuthDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,12 @@ public class ClientKpiController {
 
     private Integer getAuthenticatedEntrepriseId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return (Integer) auth.getDetails();
+        return auth.getDetails() instanceof AuthDetails details ? details.getEntrepriseId() : null;
+    }
+
+    private Integer getAuthenticatedDepartementId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth.getDetails() instanceof AuthDetails details ? details.getDepartementId() : null;
     }
 
     private boolean isAdmin() {
@@ -136,5 +142,24 @@ public class ClientKpiController {
                 clientKpiService.getVisibiliteSessions(null, LocalDate.parse(start), LocalDate.parse(end)));
     }
 
+
+    @GetMapping("/clients/{clientId}/kpis/visibilite/calendar-sessions")
+    public ResponseEntity<List<VisibiliteSessionDto>> getCalendarSessions(
+            @PathVariable Integer clientId,
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getPlanifiedSessionsForCalendar(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+    }
+
+    @GetMapping("/admin/kpis/visibilite/calendar-sessions")
+    public ResponseEntity<List<VisibiliteSessionDto>> getAdminCalendarSessions(
+            @RequestParam String start,
+            @RequestParam String end) {
+        if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        return ResponseEntity.ok(
+                clientKpiService.getPlanifiedSessionsForCalendar(null, LocalDate.parse(start), LocalDate.parse(end)));
+    }
 
 }

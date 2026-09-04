@@ -5,6 +5,7 @@ import com.s3m.formation.auth.dto.LoginResponse;
 import com.s3m.formation.auth.model.User;
 import com.s3m.formation.auth.service.AuthService;
 import com.s3m.formation.auth.service.UserService;
+import com.s3m.formation.security.util.AuthDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -20,7 +21,6 @@ public class AuthController {
     private final UserService userService;
 
     public AuthController(AuthService authService, UserService userService) {
-
         this.authService = authService;
         this.userService = userService;
     }
@@ -30,25 +30,25 @@ public class AuthController {
         LoginResponse response = authService.login(request);
 
         ResponseCookie jwtCookie = ResponseCookie.from("jwt", response.token())
-                .httpOnly(true)   // ✅ frontend cannot access
-                .secure(false)    // ⚠️ true in production HTTPS
+                .httpOnly(true)
+                .secure(false)
                 .path("/")
-                .maxAge(24 * 60 * 60) // 1 day
+                .maxAge(24 * 60 * 60)
                 .sameSite("Lax")
                 .build();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, jwtCookie.toString())
-                .body(response); // we can still return user info
+                .body(response);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
         ResponseCookie deleteCookie = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false) // true in prod
+                .secure(false)
                 .path("/")
-                .maxAge(0)     // immediately expire
+                .maxAge(0)
                 .sameSite("Lax")
                 .build();
 
@@ -66,12 +66,18 @@ public class AuthController {
         }
 
         String email = (String) auth.getPrincipal();
-        Integer entrepriseId = (Integer) auth.getDetails();
+
+        Integer entrepriseId = null;
+        Integer departementId = null;
+        if (auth.getDetails() instanceof AuthDetails details) {
+            entrepriseId = details.getEntrepriseId();
+            departementId = details.getDepartementId();
+        }
+
         String role = auth.getAuthorities().stream()
                 .map(Object::toString)
                 .findFirst()
                 .orElse("USER");
-
 
         User user = userService.findByEmail(email);
 
@@ -80,14 +86,13 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(new LoginResponse(
-                null, // token is no longer returned
+                null,
                 user.getEmail(),
                 role,
                 user.getPrenom(),
                 user.getNom(),
-                entrepriseId
+                entrepriseId,
+                departementId
         ));
     }
-
-
 }

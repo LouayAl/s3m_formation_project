@@ -265,4 +265,24 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             @Param("entrepriseId") Integer entrepriseId,
             @Param("years") Integer[] years
     );
+
+    @Query(value = """
+    SELECT
+        CASE
+            WHEN s.statut = 'TERMINEE' THEN 'REALISEE'
+            WHEN s.statut = 'PLANIFIEE' THEN 'PLANIFIEE'
+            ELSE 'AUTRE'
+        END AS statusGroup,
+        COALESCE(SUM(f.d_heures), 0) AS totalHeures
+    FROM participation p
+    JOIN session_formation s ON p.id_session = s.id_session
+    JOIN formation f ON s.id_formation = f.id_formation
+    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+      AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+    GROUP BY statusGroup
+""", nativeQuery = true)
+    List<Object[]> getFormationHoursByStatusGroup(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 }

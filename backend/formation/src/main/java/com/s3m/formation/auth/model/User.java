@@ -1,5 +1,6 @@
 package com.s3m.formation.auth.model;
 
+import com.s3m.formation.domain.departement.Departement;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -38,11 +39,20 @@ public class User {
     // 🔗 MANY USERS → ONE ENTREPRISE
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
-            name = "id_entreprise",          // FK column in users table
+            name = "id_entreprise",
             referencedColumnName = "id_entreprise",
             nullable = false
     )
     private Entreprise entreprise;
+
+    // 🔗 MANY USERS → ONE DEPARTEMENT (nullable — null means Admin / unscoped)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "id_departement",
+            referencedColumnName = "id_departement",
+            nullable = true
+    )
+    private Departement departement;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -57,6 +67,4 @@ public class User {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-
-
 }

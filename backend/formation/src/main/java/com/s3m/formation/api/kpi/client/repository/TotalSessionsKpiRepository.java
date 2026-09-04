@@ -24,4 +24,22 @@ public interface TotalSessionsKpiRepository extends JpaRepository<SessionFormati
             @Param("clientId") Integer clientId,
             @Param("years") Integer[] years
     );
+
+    @Query(value = """
+    SELECT
+        CASE
+            WHEN s.statut = 'TERMINEE' THEN 'REALISEE'
+            WHEN s.statut = 'PLANIFIEE' THEN 'PLANIFIEE'
+            ELSE 'AUTRE'
+        END AS statusGroup,
+        COUNT(*) AS totalSessions
+    FROM session_formation s
+    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+      AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+    GROUP BY statusGroup
+""", nativeQuery = true)
+    List<Object[]> getSessionsByStatusGroup(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 }

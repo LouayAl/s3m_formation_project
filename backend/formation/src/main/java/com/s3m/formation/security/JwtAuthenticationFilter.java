@@ -1,6 +1,7 @@
 package com.s3m.formation.security;
 
 import com.s3m.formation.security.jwt.JwtUtils;
+import com.s3m.formation.security.util.AuthDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -26,7 +27,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtils jwtUtils;
 
     public JwtAuthenticationFilter(JwtUtils jwtUtils) {
-
         this.jwtUtils = jwtUtils;
     }
 
@@ -36,37 +36,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-        System.out.println(
-                request.getMethod() + " " + request.getRequestURI()
-        );
 
         String token = null;
-
-        // ✅ Check cookies
         Cookie[] cookies = request.getCookies();
 
         if (cookies == null) {
             log.warn("⚠️ No cookies received from browser!");
         } else {
-
             for (Cookie cookie : cookies) {
-
                 if ("jwt".equals(cookie.getName())) {
                     token = cookie.getValue();
                 }
             }
         }
 
-        // ✅ No JWT cookie
         if (token == null) {
             log.warn("⚠️ No JWT token found in cookies → user not authenticated");
             filterChain.doFilter(request, response);
             return;
         }
-        else {
-            Claims claims = jwtUtils.parseClaims(token);
-        }
-
 
         try {
             Claims claims = jwtUtils.parseClaims(token);
@@ -78,6 +66,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     ? claims.get("entrepriseId", Integer.class)
                     : null;
 
+            Integer departementId = claims.containsKey("departementId")
+                    ? claims.get("departementId", Integer.class)
+                    : null;
 
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority(role);
@@ -89,15 +80,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             List.of(authority)
                     );
 
-            authentication.setDetails(entrepriseId);
+            authentication.setDetails(new AuthDetails(entrepriseId, departementId));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-
         } catch (JwtException ex) {
-
             log.error("❌ JWT invalid: {}", ex.getMessage());
-
             response.sendError(
                     HttpServletResponse.SC_UNAUTHORIZED,
                     "Invalid JWT"
@@ -110,9 +98,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-
         String path = request.getServletPath();
-
         return path.equals("/api/auth/login")
                 || path.equals("/api/auth/logout")
                 || path.startsWith("/api/public/");

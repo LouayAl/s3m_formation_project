@@ -24,4 +24,6 @@ public interface ClientKpiService {
     VisibiliteKpiDto getVisibiliteKpis(Integer clientId, LocalDate start, LocalDate end);
 
     List<VisibiliteSessionDto> getVisibiliteSessions(Integer clientId, LocalDate start, LocalDate end);
+
+    List<VisibiliteSessionDto> getPlanifiedSessionsForCalendar(Integer clientId, LocalDate start, LocalDate end);
 }

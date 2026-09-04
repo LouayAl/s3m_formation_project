@@ -138,4 +138,23 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
             @Param("clientId") Integer clientId,
             @Param("years") Integer[] years
     );
+
+    @Query(value = """
+    SELECT
+        CASE
+            WHEN s.statut = 'TERMINEE' THEN 'REALISEE'
+            WHEN s.statut = 'PLANIFIEE' THEN 'PLANIFIEE'
+            ELSE 'AUTRE'
+        END AS statusGroup,
+        COUNT(DISTINCT p.id_employe) AS totalParticipants
+    FROM participation p
+    JOIN session_formation s ON p.id_session = s.id_session
+    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+      AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+    GROUP BY statusGroup
+""", nativeQuery = true)
+    List<Object[]> getParticipantsByStatusGroup(
+            @Param("clientId") Integer clientId,
+            @Param("years") Integer[] years
+    );
 }

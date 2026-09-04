@@ -139,33 +139,55 @@ public interface SessionFormationRepository
     // ==============================
 
     // Note: no collection JOIN FETCH here (participations are lazy-loaded in the
-    // service, same as the existing search() method) so Spring Data pagination
-    // works correctly without the "in-memory pagination" warning.
-    //
-    // ✅ Extended with statuts (finance view: "En cours"/"Terminée" only) and
-    // facture (finance view: invoiced / not-yet-invoiced) filters. Both are
-    // optional — null/empty means "don't filter on this".
+// service, same as the existing search() method) so Spring Data pagination
+// works correctly without the "in-memory pagination" warning.
+//
+// ✅ Extended with statuts (finance view: "En cours"/"Terminée" only) and
+// facture (finance view: invoiced / not-yet-invoiced) filters. Both are
+// optional — null/empty means "don't filter on this".
+//
+// ✅ :search and :colFilter are explicitly CAST to string. Both are reused
+// across multiple expression contexts (IS NULL check, '' check, and inside
+// CONCAT/LIKE), and when the bound value is null/blank Postgres can fail to
+// infer a concrete text type for the parameter, resolving it as bytea and
+// throwing "function lower(bytea) does not exist". The CAST removes the
+// ambiguity so Postgres always treats these as text.
     @Query("""
-        SELECT s
-        FROM SessionFormation s
-        JOIN s.formation f
-        LEFT JOIN s.formateur fo
-        LEFT JOIN s.entreprise e
-        LEFT JOIN s.fournisseur fu
-        WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
-          AND (:search IS NULL OR :search = ''
-               OR LOWER(f.module) LIKE LOWER(CONCAT('%', :search, '%'))
-               OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', :search, '%')))
-          AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
-          AND (:statuts IS NULL OR s.statut IN :statuts)
-          AND (:facture IS NULL OR s.sessionFacturee = :facture)
-    """)
+SELECT s
+FROM SessionFormation s
+JOIN s.formation f
+LEFT JOIN s.formateur fo
+LEFT JOIN s.entreprise e
+LEFT JOIN s.fournisseur fu
+WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+  AND (:search IS NULL OR :search = ''
+       OR LOWER(f.module) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+       OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+  AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
+  AND (:statuts IS NULL OR s.statut IN :statuts)
+  AND (:facture IS NULL OR s.sessionFacturee = :facture)
+  AND (
+        :colField IS NULL
+     OR :colFilter IS NULL
+     OR (:colField = 'formation'           AND LOWER(f.module)                        LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'referenceSession'    AND LOWER(s.referenceSession)              LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'entrepriseNom'       AND LOWER(e.nomEntreprise)                 LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'fournisseurNom'      AND LOWER(fu.nomEntreprise)                LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'formateurNomComplet' AND LOWER(CONCAT(fo.nom, ' ', fo.prenom)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'lieu'                AND LOWER(s.lieu)                          LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'statut' AND LOWER(CAST(s.statut AS text)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+     OR (:colField = 'dateDebut' AND CAST(s.dateDebut AS text)  LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
+     OR (:colField = 'dateFin'   AND CAST(s.dateFin AS text)    LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
+  )
+""")
     Page<SessionFormation> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
-            @Param("search") String search,
-            @Param("years") List<Integer> years,
-            @Param("statuts") List<SessionFormationStatut> statuts,
-            @Param("facture") Boolean facture,
+            @Param("search")       String search,
+            @Param("years")        List<Integer> years,
+            @Param("statuts")      List<SessionFormationStatut> statuts,
+            @Param("facture")      Boolean facture,
+            @Param("colField")     String colField,
+            @Param("colFilter")    String colFilter,
             Pageable pageable
     );
 
@@ -205,4 +227,22 @@ public interface SessionFormationRepository
     boolean existsByFormateur_IdFormateur(Integer idFormateur);
 
 
+    @Query("""
+    SELECT DISTINCT s
+    FROM SessionFormation s
+    JOIN FETCH s.formation f
+    LEFT JOIN FETCH s.formateur fo
+    LEFT JOIN FETCH s.entreprise e
+    WHERE s.statut = :statut
+      AND s.dateDebut <= :end
+      AND s.dateFin >= :start
+      AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+    ORDER BY s.dateDebut ASC
+""")
+    List<SessionFormation> findByStatutOverlappingRangeAndEntreprise(
+            @Param("statut") SessionFormationStatut statut,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end,
+            @Param("entrepriseId") Integer entrepriseId
+    );
 }

@@ -12,10 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +29,19 @@ public class ClientKpiServiceImpl implements ClientKpiService {
     private final TotalSessionsKpiRepository totalSessionsRepo;
     private final SessionFormationRepository sessionFormationRepository;
 
+
+    private SessionStatusKpiDto buildStatusKpi(
+            String key,
+            Map<String, BigDecimal> hoursMap,
+            Map<String, Long> sessionsMap,
+            Map<String, Long> participantsMap
+    ) {
+        return new SessionStatusKpiDto(
+                hoursMap.getOrDefault(key, BigDecimal.ZERO),
+                sessionsMap.getOrDefault(key, 0L),
+                participantsMap.getOrDefault(key, 0L)
+        );
+    }
 
     @Override
     public ClientKpiResponse getClientKpis(Integer clientId, Integer[] years) {
@@ -112,6 +122,27 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 .getTotalSessionsByClientAndYears(clientId, yearsArray)
                 .getTotalSessions();
 
+        List<Object[]> hoursByStatus       = formationRepo.getFormationHoursByStatusGroup(clientId, yearsArray);
+        List<Object[]> sessionsByStatus    = totalSessionsRepo.getSessionsByStatusGroup(clientId, yearsArray);
+        List<Object[]> participantsByStatus = populationRepo.getParticipantsByStatusGroup(clientId, yearsArray);
+
+        Map<String, BigDecimal> hoursMap = new HashMap<>();
+        for (Object[] row : hoursByStatus) {
+            hoursMap.put((String) row[0], row[1] != null ? new BigDecimal(row[1].toString()) : BigDecimal.ZERO);
+        }
+        Map<String, Long> sessionsMap = new HashMap<>();
+        for (Object[] row : sessionsByStatus) {
+            sessionsMap.put((String) row[0], ((Number) row[1]).longValue());
+        }
+        Map<String, Long> participantsMap = new HashMap<>();
+        for (Object[] row : participantsByStatus) {
+            participantsMap.put((String) row[0], ((Number) row[1]).longValue());
+        }
+
+        SessionStatusKpiDto realiseeKpi  = buildStatusKpi("REALISEE", hoursMap, sessionsMap, participantsMap);
+        SessionStatusKpiDto planifieeKpi = buildStatusKpi("PLANIFIEE", hoursMap, sessionsMap, participantsMap);
+        SessionStatusKpiDto autresKpi    = buildStatusKpi("AUTRE", hoursMap, sessionsMap, participantsMap);
+
         return new ClientKpiResponse(
                 financier,
                 population,
@@ -121,7 +152,11 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                 hoursFamille,
                 remboursementByType,
                 totalFormationHours,
-                totalSessions
+                totalSessions,
+                realiseeKpi,
+                planifieeKpi,
+                autresKpi
+
         );
     }
 
@@ -308,5 +343,26 @@ public class ClientKpiServiceImpl implements ClientKpiService {
         ));
         dto.setTopFormationsByMonth(topFormationsByPeriod);
         return dto;
+    }
+
+
+    @Override
+    public List<VisibiliteSessionDto> getPlanifiedSessionsForCalendar(Integer clientId, LocalDate start, LocalDate end) {
+        return sessionFormationRepository
+                .findByStatutOverlappingRangeAndEntreprise(SessionFormationStatut.PLANIFIEE, start, end, clientId)
+                .stream()
+                .map(s -> new VisibiliteSessionDto(
+                        s.getIdSession(),
+                        s.getReferenceSession(),
+                        s.getFormation() != null ? s.getFormation().getModule() : "—",
+                        s.getFormateur() != null
+                                ? s.getFormateur().getNom() + " " + s.getFormateur().getPrenom() : "—",
+                        s.getEntreprise() != null ? s.getEntreprise().getNomEntreprise() : "—",
+                        s.getDateDebut(),
+                        s.getDateFin(),
+                        s.getLieu(),
+                        s.getParticipations() != null ? s.getParticipations().size() : 0
+                ))
+                .toList();
     }
 }

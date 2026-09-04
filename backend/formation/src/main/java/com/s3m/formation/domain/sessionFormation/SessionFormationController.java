@@ -41,6 +41,8 @@ public class SessionFormationController {
             @RequestParam(required = false)              String years,         // comma-separated, e.g. "2025,2026"
             @RequestParam(required = false)              String statuts,       // comma-separated, e.g. "EN_COURS,TERMINEE" — finance view
             @RequestParam(required = false)              Boolean facture,      // finance view only — ignored server-side for everyone else
+            @RequestParam(required = false)              String filterField,
+            @RequestParam(required = false)              String filterValue,
             @RequestParam(defaultValue = "0")            int page,
             @RequestParam(defaultValue = "20")           int size,
             @RequestParam(defaultValue = "idSession")    String sortBy,
@@ -62,7 +64,7 @@ public class SessionFormationController {
                 .map(SessionFormationStatut::valueOf)
                 .toList();
 
-        return service.getSessionsPaginated(entrepriseId, search, yearsList, statutsList, facture, page, size, sortBy, sortDir);
+        return service.getSessionsPaginated(entrepriseId, search, yearsList, statutsList, facture, page, size, sortBy, sortDir, filterField, filterValue);
     }
 
     // =========================

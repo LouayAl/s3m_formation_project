@@ -5,12 +5,22 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 public class SecurityContextUtils {
 
-    public static Integer getEntrepriseId() {
+    private static AuthDetails getDetails() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getDetails() instanceof Integer) {
-            return (Integer) auth.getDetails();
+        if (auth != null && auth.getDetails() instanceof AuthDetails details) {
+            return details;
         }
         return null;
+    }
+
+    public static Integer getEntrepriseId() {
+        AuthDetails details = getDetails();
+        return details != null ? details.getEntrepriseId() : null;
+    }
+
+    public static Integer getDepartementId() {
+        AuthDetails details = getDetails();
+        return details != null ? details.getDepartementId() : null;
     }
 
     public static String getEmail() {
