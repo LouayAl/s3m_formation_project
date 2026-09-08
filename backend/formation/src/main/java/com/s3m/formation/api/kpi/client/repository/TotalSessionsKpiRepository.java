@@ -11,7 +11,9 @@ import java.util.List;
 public interface TotalSessionsKpiRepository extends JpaRepository<SessionFormation, Integer> {
 
     /**
-     * Total sessions for a given client, filtered by years — native query for PostgreSQL.
+     * Total sessions for a given client (+ optional department), filtered by years.
+     * Department scoping uses EXISTS rather than a JOIN so a session with several
+     * participants in the department is still only counted once (no fan-out).
      * Called after resolveYears() so years is never empty.
      */
     @Query(value = """
@@ -19,9 +21,20 @@ public interface TotalSessionsKpiRepository extends JpaRepository<SessionFormati
         FROM session_formation s
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+          AND (
+                :departementId IS NULL
+             OR EXISTS (
+                    SELECT 1
+                    FROM participation p
+                    JOIN employe e ON e.id_employe = p.id_employe
+                    WHERE p.id_session = s.id_session
+                      AND e.id_departement = :departementId
+                )
+          )
     """, nativeQuery = true)
     TotalSessionsProjection getTotalSessionsByClientAndYears(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
@@ -36,10 +49,21 @@ public interface TotalSessionsKpiRepository extends JpaRepository<SessionFormati
     FROM session_formation s
     WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
       AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+      AND (
+            :departementId IS NULL
+         OR EXISTS (
+                SELECT 1
+                FROM participation p
+                JOIN employe e ON e.id_employe = p.id_employe
+                WHERE p.id_session = s.id_session
+                  AND e.id_departement = :departementId
+            )
+      )
     GROUP BY statusGroup
 """, nativeQuery = true)
     List<Object[]> getSessionsByStatusGroup(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 }

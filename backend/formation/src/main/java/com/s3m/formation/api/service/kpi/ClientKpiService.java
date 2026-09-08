@@ -10,20 +10,15 @@ import java.util.List;
 
 public interface ClientKpiService {
 
-    ClientKpiResponse getClientKpis(Integer clientId, Integer[] years);
+    ClientKpiResponse getClientKpis(Integer clientId, Integer departementId, Integer[] years);
 
-    TotalGrowthKpiDto getTotalGrowthKpi(
-            Integer entrepriseId,
-            String period,
-            String month,
-            Integer[] years   // ← added
-    );
+    List<Integer> getAvailableYears(Integer clientId, Integer departementId);
 
-    List<Integer> getAvailableYears(Integer clientId);
+    TotalGrowthKpiDto getTotalGrowthKpi(Integer entrepriseId, Integer departementId, String period, String month, Integer[] years);
 
-    VisibiliteKpiDto getVisibiliteKpis(Integer clientId, LocalDate start, LocalDate end);
+    VisibiliteKpiDto getVisibiliteKpis(Integer clientId, Integer departementId, LocalDate start, LocalDate end);
 
-    List<VisibiliteSessionDto> getVisibiliteSessions(Integer clientId, LocalDate start, LocalDate end);
+    List<VisibiliteSessionDto> getVisibiliteSessions(Integer clientId, Integer departementId, LocalDate start, LocalDate end);
 
-    List<VisibiliteSessionDto> getPlanifiedSessionsForCalendar(Integer clientId, LocalDate start, LocalDate end);
+    List<VisibiliteSessionDto> getPlanifiedSessionsForCalendar(Integer clientId, Integer departementId, LocalDate start, LocalDate end);
 }

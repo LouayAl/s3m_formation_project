@@ -15,6 +15,7 @@ import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.participation.ParticipationRepository;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAudit;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAuditRepository;
+import com.s3m.formation.security.util.AuthDetails;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ public class SessionFormationService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
-                : (Integer) auth.getDetails();
+                : (auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null);
 
         return repository.search(null, null, entrepriseId, null, null)
                 .stream()
@@ -91,7 +92,7 @@ public class SessionFormationService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
-                : (Integer) auth.getDetails();
+                : (auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null);
 
         Boolean effectiveFacture = currentUserIsFinance() ? facture : null;
 
@@ -134,7 +135,7 @@ public class SessionFormationService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = currentUserCanViewAllEntreprises()
                 ? requestedEntrepriseId
-                : (Integer) auth.getDetails();
+                : (auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null);
 
         return repository.findAllDateDebuts(entrepriseId).stream()
                 .map(LocalDate::getYear)
@@ -152,7 +153,7 @@ public class SessionFormationService {
 
     public SessionFormationResponseDto getSession(Integer sessionId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         // ADMIN_FINANCE (like ADMIN) isn't scoped to a single entreprise, so the
         // ownership check below only applies to entreprise-scoped roles.

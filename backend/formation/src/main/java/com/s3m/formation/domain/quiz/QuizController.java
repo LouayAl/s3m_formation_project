@@ -13,6 +13,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
+import com.s3m.formation.security.util.AuthDetails;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -57,9 +59,9 @@ public class QuizController {
     @GetMapping("/api/quiz/summary")
     public ResponseEntity<List<QuizSummaryDto>> getSummary(
             org.springframework.security.core.Authentication auth) {
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails details ? details.getEntrepriseId() : null;
         if (!QUIZ_ENTREPRISE_ID.equals(entrepriseId)) {
-            return ResponseEntity.ok(List.of()); // empty list for other clients
+            return ResponseEntity.ok(List.of());
         }
         return ResponseEntity.ok(service.getSummaryForEntreprise(entrepriseId));
     }

@@ -211,6 +211,9 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
         JOIN FETCH s.formation f
         LEFT JOIN FETCH s.formateur fo
         LEFT JOIN FETCH s.entreprise e
+        LEFT JOIN FETCH s.participations part
+        LEFT JOIN FETCH part.employe emp
+        LEFT JOIN FETCH emp.departement dep
         WHERE s.statut = :statut
           AND s.dateDebut >= :start
           AND s.dateDebut <= :end
@@ -228,17 +231,20 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
 
 
     @Query("""
-    SELECT DISTINCT s
-    FROM SessionFormation s
-    JOIN FETCH s.formation f
-    LEFT JOIN FETCH s.formateur fo
-    LEFT JOIN FETCH s.entreprise e
-    WHERE s.statut = :statut
-      AND s.dateDebut <= :end
-      AND s.dateFin >= :start
-      AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
-    ORDER BY s.dateDebut ASC
-""")
+        SELECT DISTINCT s
+        FROM SessionFormation s
+        JOIN FETCH s.formation f
+        LEFT JOIN FETCH s.formateur fo
+        LEFT JOIN FETCH s.entreprise e
+        LEFT JOIN FETCH s.participations part
+        LEFT JOIN FETCH part.employe emp
+        LEFT JOIN FETCH emp.departement dep
+        WHERE s.statut = :statut
+          AND s.dateDebut <= :end
+          AND s.dateFin >= :start
+          AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+        ORDER BY s.dateDebut ASC
+    """)
     List<SessionFormation> findByStatutOverlappingRangeAndEntreprise(
             @Param("statut") SessionFormationStatut statut,
             @Param("start") LocalDate start,

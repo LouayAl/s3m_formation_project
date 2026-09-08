@@ -11,6 +11,7 @@ import com.s3m.formation.domain.formation.FormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
+import com.s3m.formation.security.util.AuthDetails;
 import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -53,7 +54,7 @@ public class EMService {
     public EMDashboardKpiDto getDashboardKpis() {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         List<SessionFormation> allSessions = sessionRepo.search(
                 null, null, entrepriseId, null, null
@@ -281,7 +282,7 @@ public class EMService {
     // ─── Sessions filtered by current user's entreprise ───────────────────────
     public List<SessionFormationResponseDto> getSessionsForCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         return sessionRepo.search(null, null, entrepriseId, null, null)
                 .stream()
@@ -291,7 +292,7 @@ public class EMService {
 
     public SessionFormationResponseDto getSessionForCurrentUser(Integer sessionId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         SessionFormation session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -308,7 +309,7 @@ public class EMService {
 
     public List<EmployeResponseDto> getEmployesForCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         return employeRepo.findByEntreprise_IdEntreprise(entrepriseId)
                 .stream()

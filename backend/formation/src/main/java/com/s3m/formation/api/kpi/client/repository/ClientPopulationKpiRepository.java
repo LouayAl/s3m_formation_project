@@ -10,54 +10,58 @@ import java.util.List;
 
 public interface ClientPopulationKpiRepository extends JpaRepository<Employe, Integer> {
 
-    /**
-     * CSP breakdown — native query, uses = ANY(:years) for PostgreSQL array binding.
-     */
     @Query(value = """
         SELECT COALESCE(e.csp, 'Non renseigné') AS label, COUNT(DISTINCT e.id_employe) AS count
         FROM participation p
         JOIN employe e        ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY COALESCE(e.csp, 'Non renseigné')
     """, nativeQuery = true)
     List<RepartitionItemProjection> countByCsp(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
-    /**
-     * Fonction / TypeContrat / Genre breakdowns query the Employe table directly
-     * (no date filter — they are workforce snapshots, not tied to training sessions).
-     */
     @Query("""
         SELECT COALESCE(e.fonction, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
         WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
+          AND (:departementId IS NULL OR e.departement.id = :departementId)
         GROUP BY COALESCE(e.fonction, 'Non renseigné')
     """)
-    List<RepartitionItemProjection> countByFonction(@Param("clientId") Integer clientId);
+    List<RepartitionItemProjection> countByFonction(
+            @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId
+    );
 
     @Query("""
         SELECT COALESCE(e.typeContrat, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
         WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
+          AND (:departementId IS NULL OR e.departement.id = :departementId)
         GROUP BY COALESCE(e.typeContrat, 'Non renseigné')
     """)
-    List<RepartitionItemProjection> countByTypeContrat(@Param("clientId") Integer clientId);
+    List<RepartitionItemProjection> countByTypeContrat(
+            @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId
+    );
 
     @Query("""
         SELECT COALESCE(e.f_h, 'Non renseigné') AS label, COUNT(e) AS count
         FROM Employe e
         WHERE (:clientId IS NULL OR e.entreprise.idEntreprise = :clientId)
+          AND (:departementId IS NULL OR e.departement.id = :departementId)
         GROUP BY COALESCE(e.f_h, 'Non renseigné')
     """)
-    List<RepartitionItemProjection> countByGenre(@Param("clientId") Integer clientId);
+    List<RepartitionItemProjection> countByGenre(
+            @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId
+    );
 
-    /**
-     * Gender breakdown by department — native query.
-     */
     @Query(value = """
         SELECT
             COALESCE(d.nom, 'Non défini')  AS departement,
@@ -68,18 +72,17 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         LEFT JOIN departement d  ON e.id_departement = d.id_departement
         JOIN session_formation s ON p.id_session  = s.id_session
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY d.nom, e.f_h
         ORDER BY d.nom, e.f_h
     """, nativeQuery = true)
     List<ClientGenderByDepartmentKpiProjection> getGenderByDepartmentForClient(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
-    /**
-     * Training hours by gender — native query.
-     */
     @Query(value = """
         SELECT
             COALESCE(e.f_h, 'N')            AS label,
@@ -89,17 +92,16 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         JOIN employe e           ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY e.f_h
     """, nativeQuery = true)
     List<GenderHoursKpiProjection> getTrainingHoursByGender(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
-    /**
-     * Training hours by CSP — native query.
-     */
     @Query(value = """
         SELECT
             CASE
@@ -112,6 +114,7 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         JOIN employe e           ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
         GROUP BY
             CASE
@@ -121,21 +124,22 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
     """, nativeQuery = true)
     List<CspHoursKpiProjection> getTrainingHoursByCsp(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
-    /**
-     * Total distinct participants — native query.
-     */
     @Query(value = """
         SELECT COUNT(DISTINCT p.id_employe) AS totalParticipants
         FROM participation p
+        JOIN employe e ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session = s.id_session
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     TotalParticipantsKpiProjection getTotalParticipants(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
@@ -148,13 +152,16 @@ public interface ClientPopulationKpiRepository extends JpaRepository<Employe, In
         END AS statusGroup,
         COUNT(DISTINCT p.id_employe) AS totalParticipants
     FROM participation p
+    JOIN employe e ON p.id_employe = e.id_employe
     JOIN session_formation s ON p.id_session = s.id_session
     WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+      AND (:departementId IS NULL OR e.id_departement = :departementId)
       AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     GROUP BY statusGroup
 """, nativeQuery = true)
     List<Object[]> getParticipantsByStatusGroup(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 }

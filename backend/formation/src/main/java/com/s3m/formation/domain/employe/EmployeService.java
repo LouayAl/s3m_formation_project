@@ -5,6 +5,7 @@ import com.s3m.formation.domain.departement.Departement;
 import com.s3m.formation.domain.departement.DepartementRepository;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
+import com.s3m.formation.security.util.AuthDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -54,7 +55,7 @@ public class EmployeService {
 
         // Everyone else: always scoped to their own entreprise, ignore requestedEntrepriseId
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         return employeRepository.findByEntreprise_IdEntreprise(entrepriseId)
                 .stream()
@@ -77,8 +78,7 @@ public class EmployeService {
         Authentication auth =
                 SecurityContextHolder.getContext().getAuthentication();
 
-        Integer userEntrepriseId =
-                (Integer) auth.getDetails();
+        Integer userEntrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         boolean isManager = auth.getAuthorities()
                 .stream()

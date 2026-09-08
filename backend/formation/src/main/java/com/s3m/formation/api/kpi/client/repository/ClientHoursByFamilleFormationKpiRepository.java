@@ -9,34 +9,24 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ClientHoursByFamilleFormationKpiRepository extends JpaRepository<SessionFormation, Integer> {
-    @Query("""
-        SELECT
-            f.familleFormation AS familleFormation,
-            SUM(f.dureeHeures) AS totalHeures
-        FROM Participation p
-        JOIN p.session s
-        JOIN s.formation f
-        GROUP BY f.familleFormation
-        ORDER BY totalHeures DESC
-    """)
-    List<ClientHoursByFamilleFormationKpiProjection> findByClientId(
-            @Param("clientId") Integer clientId
-    );
 
     @Query(value = """
-    SELECT
-        f.famille_formation AS familleFormation,
-        SUM(f.d_heures) AS totalHeures
-    FROM participation p
-    JOIN session_formation s ON p.id_session = s.id_session
-    JOIN formation f ON s.id_formation = f.id_formation
-    WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
-      AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
-    GROUP BY f.famille_formation
-    ORDER BY totalHeures DESC
-""", nativeQuery = true)
+        SELECT
+            f.famille_formation AS familleFormation,
+            SUM(f.d_heures) AS totalHeures
+        FROM participation p
+        JOIN employe e ON p.id_employe = e.id_employe
+        JOIN session_formation s ON p.id_session = s.id_session
+        JOIN formation f ON s.id_formation = f.id_formation
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
+          AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
+        GROUP BY f.famille_formation
+        ORDER BY totalHeures DESC
+    """, nativeQuery = true)
     List<ClientHoursByFamilleFormationKpiProjection> findByClientIdAndYears(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 }

@@ -18,6 +18,8 @@ import java.text.Normalizer;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import com.s3m.formation.security.util.AuthDetails;
+
 
 @RestController
 @RequiredArgsConstructor
@@ -66,7 +68,7 @@ public class EvaluationAChaudController {
     @GetMapping("/api/evaluation-a-chaud/summary")
     public ResponseEntity<List<EvaluationSummaryDto>> getSummary(
             org.springframework.security.core.Authentication auth) {
-        Integer entrepriseId = (Integer) auth.getDetails();
+        Integer entrepriseId = auth.getDetails() instanceof AuthDetails details ? details.getEntrepriseId() : null;
         return ResponseEntity.ok(service.getSummaryForEntreprise(entrepriseId));
     }
 

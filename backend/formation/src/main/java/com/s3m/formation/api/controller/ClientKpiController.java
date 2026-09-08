@@ -23,14 +23,19 @@ public class ClientKpiController {
 
     private final ClientKpiService clientKpiService;
 
-    private Integer getAuthenticatedEntrepriseId() {
+    private AuthDetails getAuthDetails() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getDetails() instanceof AuthDetails details ? details.getEntrepriseId() : null;
+        return auth != null && auth.getDetails() instanceof AuthDetails details ? details : null;
+    }
+
+    private Integer getAuthenticatedEntrepriseId() {
+        AuthDetails details = getAuthDetails();
+        return details != null ? details.getEntrepriseId() : null;
     }
 
     private Integer getAuthenticatedDepartementId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth.getDetails() instanceof AuthDetails details ? details.getDepartementId() : null;
+        AuthDetails details = getAuthDetails();
+        return details != null ? details.getDepartementId() : null;
     }
 
     private boolean isAdmin() {
@@ -43,6 +48,11 @@ public class ClientKpiController {
         return !isAdmin() && !getAuthenticatedEntrepriseId().equals(clientId);
     }
 
+    private Integer resolveDepartementId(Integer requestedDepartementId) {
+        if (isAdmin()) return requestedDepartementId;
+        return getAuthenticatedDepartementId();
+    }
+
     private Integer[] toYearsArray(List<Integer> years) {
         return (years == null || years.isEmpty())
                 ? new Integer[0]
@@ -52,19 +62,25 @@ public class ClientKpiController {
     @GetMapping("/clients/{clientId}/kpis")
     public ResponseEntity<ClientKpiResponse> getClientKpis(
             @PathVariable Integer clientId,
-            @RequestParam(required = false) List<Integer> years
+            @RequestParam(required = false) List<Integer> years,
+            @RequestParam(required = false) Integer departementId
     ) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        ClientKpiResponse response = clientKpiService.getClientKpis(clientId, toYearsArray(years));
+        ClientKpiResponse response = clientKpiService.getClientKpis(
+                clientId, resolveDepartementId(departementId), toYearsArray(years));
         return response != null ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/clients/{clientId}/kpis/years")
-    public ResponseEntity<List<Integer>> getAvailableYears(@PathVariable Integer clientId) {
+    public ResponseEntity<List<Integer>> getAvailableYears(
+            @PathVariable Integer clientId,
+            @RequestParam(required = false) Integer departementId
+    ) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        return ResponseEntity.ok(clientKpiService.getAvailableYears(clientId));
+        return ResponseEntity.ok(
+                clientKpiService.getAvailableYears(clientId, resolveDepartementId(departementId)));
     }
 
     @GetMapping("/clients/{clientId}/kpis/total-growth")
@@ -72,94 +88,106 @@ public class ClientKpiController {
             @PathVariable Integer clientId,
             @RequestParam(defaultValue = "monthly") String period,
             @RequestParam(required = false) String month,
-            @RequestParam(required = false) List<Integer> years
+            @RequestParam(required = false) List<Integer> years,
+            @RequestParam(required = false) Integer departementId
     ) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
 
-        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(clientId, period, month, toYearsArray(years)));
+        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(
+                clientId, resolveDepartementId(departementId), period, month, toYearsArray(years)));
     }
 
     @GetMapping("/admin/kpis")
     public ResponseEntity<ClientKpiResponse> getAdminKpis(
-            @RequestParam(required = false) List<Integer> years
+            @RequestParam(required = false) List<Integer> years,
+            @RequestParam(required = false) Integer departementId
     ) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(clientKpiService.getClientKpis(null, toYearsArray(years)));
+        return ResponseEntity.ok(clientKpiService.getClientKpis(
+                null, resolveDepartementId(departementId), toYearsArray(years)));
     }
 
     @GetMapping("/admin/kpis/years")
-    public ResponseEntity<List<Integer>> getAdminAvailableYears() {
+    public ResponseEntity<List<Integer>> getAdminAvailableYears(
+            @RequestParam(required = false) Integer departementId
+    ) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(clientKpiService.getAvailableYears(null));
+        return ResponseEntity.ok(
+                clientKpiService.getAvailableYears(null, resolveDepartementId(departementId)));
     }
 
     @GetMapping("/admin/kpis/total-growth")
     public ResponseEntity<TotalGrowthKpiDto> getAdminTotalGrowth(
             @RequestParam(defaultValue = "monthly") String period,
             @RequestParam(required = false) String month,
-            @RequestParam(required = false) List<Integer> years
+            @RequestParam(required = false) List<Integer> years,
+            @RequestParam(required = false) Integer departementId
     ) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(null, period, month, toYearsArray(years)));
+        return ResponseEntity.ok(clientKpiService.getTotalGrowthKpi(
+                null, resolveDepartementId(departementId), period, month, toYearsArray(years)));
     }
-
 
     @GetMapping("/clients/{clientId}/kpis/visibilite")
     public ResponseEntity<VisibiliteKpiDto> getVisibiliteKpis(
             @PathVariable Integer clientId,
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getVisibiliteKpis(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getVisibiliteKpis(
+                clientId, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
 
     @GetMapping("/clients/{clientId}/kpis/visibilite/sessions")
     public ResponseEntity<List<VisibiliteSessionDto>> getVisibiliteSessions(
             @PathVariable Integer clientId,
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getVisibiliteSessions(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getVisibiliteSessions(
+                clientId, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
 
     @GetMapping("/admin/kpis/visibilite")
     public ResponseEntity<VisibiliteKpiDto> getAdminVisibiliteKpis(
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getVisibiliteKpis(null, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getVisibiliteKpis(
+                null, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
 
     @GetMapping("/admin/kpis/visibilite/sessions")
     public ResponseEntity<List<VisibiliteSessionDto>> getAdminVisibiliteSessions(
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getVisibiliteSessions(null, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getVisibiliteSessions(
+                null, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
-
 
     @GetMapping("/clients/{clientId}/kpis/visibilite/calendar-sessions")
     public ResponseEntity<List<VisibiliteSessionDto>> getCalendarSessions(
             @PathVariable Integer clientId,
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (isUnauthorized(clientId)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getPlanifiedSessionsForCalendar(clientId, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getPlanifiedSessionsForCalendar(
+                clientId, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
 
     @GetMapping("/admin/kpis/visibilite/calendar-sessions")
     public ResponseEntity<List<VisibiliteSessionDto>> getAdminCalendarSessions(
             @RequestParam String start,
-            @RequestParam String end) {
+            @RequestParam String end,
+            @RequestParam(required = false) Integer departementId) {
         if (!isAdmin()) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        return ResponseEntity.ok(
-                clientKpiService.getPlanifiedSessionsForCalendar(null, LocalDate.parse(start), LocalDate.parse(end)));
+        return ResponseEntity.ok(clientKpiService.getPlanifiedSessionsForCalendar(
+                null, resolveDepartementId(departementId), LocalDate.parse(start), LocalDate.parse(end)));
     }
-
 }

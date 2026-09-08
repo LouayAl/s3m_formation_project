@@ -13,26 +13,33 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     @Query(value = """
         SELECT COALESCE(SUM(f.d_heures), 0) AS totalHeures
         FROM participation p
+        JOIN employe e ON p.id_employe = e.id_employe
         JOIN session_formation s ON p.id_session  = s.id_session
         JOIN formation f         ON s.id_formation = f.id_formation
         WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
           AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     """, nativeQuery = true)
     TotalFormationHoursProjection getTotalFormationHours(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
     @Query(value = """
-        SELECT DISTINCT EXTRACT(YEAR FROM date_debut)::INT AS year
-        FROM session_formation
-        WHERE (:clientId IS NULL OR id_entreprise = :clientId)
-          AND date_debut IS NOT NULL
+        SELECT DISTINCT EXTRACT(YEAR FROM s.date_debut)::INT AS year
+        FROM session_formation s
+        LEFT JOIN participation p ON p.id_session = s.id_session
+        LEFT JOIN employe e       ON p.id_employe = e.id_employe
+        WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+          AND (:departementId IS NULL OR e.id_departement = :departementId)
+          AND s.date_debut IS NOT NULL
         ORDER BY year DESC
     """, nativeQuery = true)
-    List<Integer> findDistinctYearsByClientId(@Param("clientId") Integer clientId);
-
-    // ─── Monthly — no year filter (all time) ────────────────────────────────────
+    List<Integer> findDistinctYearsByClientId(
+            @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId
+    );
 
     @Query(value = """
         WITH monthly_totals AS (
@@ -41,9 +48,11 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
                 f.module AS formation,
                 SUM(f.d_heures) AS total_heures
             FROM participation p
+            JOIN employe e ON p.id_employe = e.id_employe
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
             GROUP BY mois, f.module
         ),
         top_per_month AS (
@@ -63,10 +72,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
         ORDER BY TO_DATE(m.mois, 'Mon YYYY')
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByMonthForEntreprise(
-            @Param("entrepriseId") Integer entrepriseId
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId
     );
-
-    // ─── Monthly — single year (label = "Jan YYYY") ──────────────────────────────
 
     @Query(value = """
         WITH monthly_totals AS (
@@ -75,9 +83,11 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
                 f.module AS formation,
                 SUM(f.d_heures) AS total_heures
             FROM participation p
+            JOIN employe e ON p.id_employe = e.id_employe
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
               AND EXTRACT(YEAR FROM s.date_debut)::INT = :year
             GROUP BY mois, f.module
         ),
@@ -99,10 +109,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByMonthForEntrepriseAndYear(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("year") Integer year
     );
-
-    // ─── Monthly — multiple years (label = "Jan", sum across years) ─────────────
 
     @Query(value = """
         WITH monthly_totals AS (
@@ -112,9 +121,11 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
                 f.module AS formation,
                 SUM(f.d_heures) AS total_heures
             FROM participation p
+            JOIN employe e ON p.id_employe = e.id_employe
             JOIN session_formation s ON p.id_session = s.id_session
             JOIN formation f ON s.id_formation = f.id_formation
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
               AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
             GROUP BY TO_CHAR(s.date_debut, 'Mon'), EXTRACT(MONTH FROM s.date_debut)::INT, f.module
         ),
@@ -136,10 +147,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByMonthForEntrepriseAndYears(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
-
-    // ─── Daily (drilldown) — unchanged ───────────────────────────────────────────
 
     @Query(value = """
         WITH session_hours AS (
@@ -151,7 +161,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
+            JOIN employe e ON p.id_employe = e.id_employe
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
               AND s.date_debut IS NOT NULL
               AND TO_CHAR(s.date_debut, 'YYYY-MM') = :month
             GROUP BY DATE(s.date_debut), f.module, s.id_session, f.d_heures
@@ -179,10 +191,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByDayForEntreprise(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("month") String month
     );
-
-    // ─── Yearly — no year filter (all time) ─────────────────────────────────────
 
     @Query(value = """
         WITH session_hours AS (
@@ -194,7 +205,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
+            JOIN employe e ON p.id_employe = e.id_employe
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
               AND s.date_debut IS NOT NULL
             GROUP BY annee, f.module, s.id_session, f.d_heures
         ),
@@ -220,10 +233,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
         ORDER BY y.annee
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByYearForEntreprise(
-            @Param("entrepriseId") Integer entrepriseId
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId
     );
-
-    // ─── Yearly — filtered by selected years ─────────────────────────────────────
 
     @Query(value = """
         WITH session_hours AS (
@@ -235,7 +247,9 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             FROM session_formation s
             JOIN formation f ON s.id_formation = f.id_formation
             JOIN participation p ON p.id_session = s.id_session
+            JOIN employe e ON p.id_employe = e.id_employe
             WHERE (:entrepriseId IS NULL OR s.id_entreprise = :entrepriseId)
+              AND (:departementId IS NULL OR e.id_departement = :departementId)
               AND s.date_debut IS NOT NULL
               AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
             GROUP BY annee, f.module, s.id_session, f.d_heures
@@ -263,6 +277,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
     """, nativeQuery = true)
     List<Object[]> getTotalGrowthByYearForEntrepriseAndYears(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 
@@ -275,14 +290,17 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
         END AS statusGroup,
         COALESCE(SUM(f.d_heures), 0) AS totalHeures
     FROM participation p
+    JOIN employe e ON p.id_employe = e.id_employe
     JOIN session_formation s ON p.id_session = s.id_session
     JOIN formation f ON s.id_formation = f.id_formation
     WHERE (:clientId IS NULL OR s.id_entreprise = :clientId)
+      AND (:departementId IS NULL OR e.id_departement = :departementId)
       AND EXTRACT(YEAR FROM s.date_debut)::INT = ANY(:years)
     GROUP BY statusGroup
 """, nativeQuery = true)
     List<Object[]> getFormationHoursByStatusGroup(
             @Param("clientId") Integer clientId,
+            @Param("departementId") Integer departementId,
             @Param("years") Integer[] years
     );
 }

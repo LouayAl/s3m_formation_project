@@ -1,6 +1,9 @@
     package com.s3m.formation.api.em;
 
     import com.s3m.formation.api.dto.*;
+    import com.s3m.formation.domain.critereTemplate.CritereTemplateType;
+    import com.s3m.formation.domain.critereTemplate.CritereTemplateService;
+
     import lombok.RequiredArgsConstructor;
     import org.springframework.http.HttpStatus;
     import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,6 +19,7 @@
     public class EMController {
 
         private final EMService emService;
+        private final CritereTemplateService critereTemplateService;
 
         // GET /api/em/dashboard
         @GetMapping("/dashboard")
@@ -128,6 +132,51 @@
         @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<FormationResponseDto> getFormationsForCurrentUser() {
             return emService.getFormationsForCurrentUser();
+        }
+
+        @GetMapping("/critere-templates")
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public List<CritereTemplateDto> listCritereTemplates(
+                @RequestParam(required = false) CritereTemplateType type
+        ) {
+            return critereTemplateService.listTemplates(type);
+        }
+
+        @PostMapping("/critere-templates")
+        @ResponseStatus(HttpStatus.CREATED)
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public CritereTemplateDto createCritereTemplate(@RequestBody CreateCritereTemplateRequest request) {
+            return critereTemplateService.createTemplate(request);
+        }
+
+        @DeleteMapping("/critere-templates/{templateId}")
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public void deleteCritereTemplate(@PathVariable Integer templateId) {
+            critereTemplateService.deleteTemplate(templateId);
+        }
+
+        @GetMapping("/critere-templates/{templateId}/entries")
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public List<CritereTemplateEntryDto> getCritereTemplateEntries(@PathVariable Integer templateId) {
+            return critereTemplateService.getTemplateEntries(templateId);
+        }
+
+        @PutMapping("/critere-templates/{templateId}/entries")
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public List<CritereTemplateEntryDto> saveCritereTemplateEntries(
+                @PathVariable Integer templateId,
+                @RequestBody CritereTemplateEntriesRequest request
+        ) {
+            return critereTemplateService.saveTemplateEntries(templateId, request);
+        }
+
+        @PostMapping("/sessions/{sessionId}/criteres/clone-from-template")
+        @PreAuthorize("hasAnyAuthority('ADMIN','EQUIPMENT_MANAGER')")
+        public void cloneCriteresFromTemplate(
+                @PathVariable Integer sessionId,
+                @RequestParam Integer templateId
+        ) {
+            critereTemplateService.cloneIntoSession(sessionId, templateId);
         }
 
     }
