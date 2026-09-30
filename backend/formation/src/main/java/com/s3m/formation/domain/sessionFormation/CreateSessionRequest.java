@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -31,6 +32,8 @@ public class CreateSessionRequest {
 
     @NotNull
     private LocalDate dateFin;
+
+    private List<LocalDate> jours;
 
     private Integer idFormateur; // optional
     private Integer idFournisseur; // optional

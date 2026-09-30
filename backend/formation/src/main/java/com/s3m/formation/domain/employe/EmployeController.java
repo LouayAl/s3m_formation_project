@@ -25,7 +25,7 @@ public class EmployeController {
     // Optional entrepriseId — only honored for ADMIN, ignored for everyone else.
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<EmployeResponseDto> getAllEmployes(
             @RequestParam(required = false) Integer entrepriseId
     ) {
@@ -37,7 +37,7 @@ public class EmployeController {
     // Usage: GET /api/employes/paginated?page=0&size=20&search=john&entrepriseId=4
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public Page<EmployeResponseDto> getEmployesPaginated(
             @RequestParam(defaultValue = "0")         int page,
             @RequestParam(defaultValue = "20")        int size,
@@ -53,7 +53,7 @@ public class EmployeController {
     // GET BY ID
     // =========================
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public EmployeResponseDto getEmployeById(@PathVariable Integer id) {
         return employeService.getEmployeById(id);
     }
@@ -62,6 +62,7 @@ public class EmployeController {
     // SEARCH
     // =========================
     @GetMapping("/search")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<EmployeResponseDto> search(@RequestParam String keyword) {
         return employeService.searchEmployes(keyword);
     }

@@ -224,7 +224,8 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                         s.getDateDebut(),
                         s.getDateFin(),
                         s.getLieu(),
-                        (int) countDeptParticipants(s, departementId)
+                        (int) countDeptParticipants(s, departementId),
+                        s.resolveJours()
                 ))
                 .toList();
     }
@@ -245,7 +246,8 @@ public class ClientKpiServiceImpl implements ClientKpiService {
                         s.getDateDebut(),
                         s.getDateFin(),
                         s.getLieu(),
-                        (int) countDeptParticipants(s, departementId)
+                        (int) countDeptParticipants(s, departementId),
+                        s.resolveJours()
                 ))
                 .toList();
     }

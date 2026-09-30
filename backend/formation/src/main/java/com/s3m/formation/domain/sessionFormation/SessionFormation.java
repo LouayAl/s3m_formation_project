@@ -8,10 +8,15 @@ import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.reservation.DemandeReservation;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.DayOfWeek;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 @Entity
 @Table(name = "session_formation")
@@ -68,6 +73,19 @@ public class SessionFormation {
     @Column(name = "lieu", length = 255)
     private String lieu;
 
+    @Column(name = "formateur_confirme", nullable = false)
+    @Builder.Default
+    private Boolean formateurConfirme = false;
+
+    @Column(name = "notification_envoyee_le")
+    private LocalDateTime notificationEnvoyeeLe;
+
+    @Column(name = "formateur_confirme_le")
+    private LocalDateTime formateurConfirmeLe;
+
+    @Column(name = "formateur_confirme_par")
+    private String formateurConfirmePar;
+
     /**
      * Reservation linked to this session
      */
@@ -86,6 +104,9 @@ public class SessionFormation {
     @Builder.Default
     private Boolean sessionFacturee = false;
 
+    @Column(name = "created_in_em", nullable = false)
+    private boolean createdInEm = false;
+
     @PrePersist
     public void prePersist() {
         if (this.statut == null) {
@@ -94,6 +115,10 @@ public class SessionFormation {
 
         if (this.sessionFacturee == null) {
             this.sessionFacturee = false;
+        }
+
+        if (this.formateurConfirme == null) {
+            this.formateurConfirme = false;
         }
     }
 
@@ -144,6 +169,41 @@ public class SessionFormation {
         }
 
         this.statut = SessionFormationStatut.ANNULEE;
+    }
+
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "session_jour", joinColumns = @JoinColumn(name = "id_session"))
+    @Column(name = "date_jour")
+    @BatchSize(size = 50)   // avoids one query per row in the paginated list
+    @Builder.Default
+    private Set<LocalDate> joursSession = new TreeSet<>();
+
+    /**
+     * The effective training days. Falls back to the contiguous
+     * dateDebut→dateFin range for legacy sessions, and also when the stored days
+     * are out of sync with the dates (e.g. some other code path changed the dates).
+     */
+    public List<LocalDate> resolveJours() {
+        if (joursSession != null && !joursSession.isEmpty()) {
+            TreeSet<LocalDate> sorted = new TreeSet<>(joursSession);
+            if (sorted.first().equals(dateDebut) && sorted.last().equals(dateFin)) {
+                long fullRangeSize = dateDebut.datesUntil(dateFin.plusDays(1)).count();
+                if (dJours != null && sorted.size() > dJours.intValue()
+                        && sorted.size() == fullRangeSize) {
+                    List<LocalDate> weekdays = sorted.stream()
+                            .filter(day -> day.getDayOfWeek() != DayOfWeek.SATURDAY
+                                    && day.getDayOfWeek() != DayOfWeek.SUNDAY)
+                            .toList();
+                    if (BigDecimal.valueOf(weekdays.size()).compareTo(dJours) == 0) {
+                        return weekdays;
+                    }
+                }
+                return List.copyOf(sorted);
+            }
+        }
+        if (dateDebut == null || dateFin == null || dateFin.isBefore(dateDebut)) return List.of();
+        return dateDebut.datesUntil(dateFin.plusDays(1)).toList();
     }
 }
 

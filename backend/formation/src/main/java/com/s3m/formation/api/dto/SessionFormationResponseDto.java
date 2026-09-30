@@ -4,6 +4,7 @@ import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record SessionFormationResponseDto(
@@ -25,6 +26,11 @@ public record SessionFormationResponseDto(
         int participantsCount,
         List<ParticipantResponseDto> participants,
         String lieu,
-        Boolean facture              // ✅ new — only populated for ADMIN_FINANCE, null otherwise
+        Boolean facture,              // ✅ new — only populated for ADMIN_FINANCE, null otherwise
+        Boolean formateurConfirme,          // NEW
+        LocalDateTime notificationEnvoyeeLe, // NEW
+        LocalDateTime formateurConfirmeLe,
+        List<LocalDate> jours,
+        Boolean formateurInterne
 ) {
 }

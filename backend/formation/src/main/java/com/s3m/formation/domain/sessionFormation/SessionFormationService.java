@@ -6,6 +6,7 @@ import com.s3m.formation.api.dto.UpdateSessionRequest;
 import com.s3m.formation.domain.coutFormation.CoutFormation;
 import com.s3m.formation.domain.coutFormation.CoutFormationRepository;
 import com.s3m.formation.domain.employe.EmployeRepository;
+import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.formateur.FormateurRepository;
@@ -54,6 +55,7 @@ public class SessionFormationService {
     private final ParticipationRepository participationRepository;
     private final EmployeRepository employeRepository;
     private final CoutFormationRepository coutFormationRepository;
+    private final EmailNotificationService emailNotificationService;
 
 
     /* =========================
@@ -66,8 +68,9 @@ public class SessionFormationService {
                 ? requestedEntrepriseId
                 : (auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null);
 
-        return repository.search(null, null, entrepriseId, null, null)
+        return repository.search(null, null, entrepriseId, null, null, false)
                 .stream()
+                .filter(this::visibleToCurrentDepartmentChef)
                 .map(this::toDto)
                 .toList();
     }
@@ -125,8 +128,9 @@ public class SessionFormationService {
         if (colField == null || colFilter == null) { colField = null; colFilter = null; }
 
         return repository.findPaginated(
-                entrepriseId, search, yearsFilter, statutsFilter,
-                effectiveFacture, colField, colFilter, pageable
+                entrepriseId, currentUserIsDepartmentChef() ? requireCurrentDepartment() : null,
+                search, yearsFilter, statutsFilter,
+                effectiveFacture, currentUserIsFinance(), colField, colFilter, pageable
         ).map(this::toDto);
     }
 
@@ -137,7 +141,7 @@ public class SessionFormationService {
                 ? requestedEntrepriseId
                 : (auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null);
 
-        return repository.findAllDateDebuts(entrepriseId).stream()
+        return repository.findAllDateDebuts(entrepriseId, currentUserIsFinance()).stream()
                 .map(LocalDate::getYear)
                 .distinct()
                 .sorted(Comparator.reverseOrder())
@@ -147,6 +151,8 @@ public class SessionFormationService {
     public List<SessionFormationResponseDto> getSessionsByFormation(Integer formationId) {
         return repository.findByFormation_IdFormation(formationId)
                 .stream()
+                .filter(s -> !s.isCreatedInEm())
+                .filter(this::visibleToCurrentDepartmentChef)
                 .map(this::toDto)
                 .toList();
     }
@@ -159,14 +165,17 @@ public class SessionFormationService {
         // ownership check below only applies to entreprise-scoped roles.
         if (currentUserCanViewAllEntreprises()) {
             return repository.findById(sessionId)
+                    .filter(s -> !s.isCreatedInEm())
                     .map(this::toDto)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND, "Session non trouvée"));
         }
 
         return repository.findById(sessionId)
+                .filter(s -> !s.isCreatedInEm())
                 .filter(s -> s.getEntreprise() != null &&
                         s.getEntreprise().getIdEntreprise().equals(entrepriseId))
+                .filter(this::visibleToCurrentDepartmentChef)
                 .map(this::toDto)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Session non trouvée"));
@@ -177,15 +186,23 @@ public class SessionFormationService {
        ========================= */
 
     public SessionFormation createSession(CreateSessionRequest request) {
+        return createSession(request, false);
+    }
+
+    public SessionFormation createEmSession(CreateSessionRequest request) {
+        return createSession(request, true);
+    }
+
+    private SessionFormation createSession(CreateSessionRequest request, boolean createdInEm) {
         try {
-            return createSessionInternal(request);
+            return createSessionInternal(request, createdInEm);
         } catch (DataIntegrityViolationException e) {
             // Retry once if reference collision happens
-            return createSessionInternal(request);
+            return createSessionInternal(request, createdInEm);
         }
     }
 
-    private SessionFormation createSessionInternal(CreateSessionRequest request) {
+    private SessionFormation createSessionInternal(CreateSessionRequest request, boolean createdInEm) {
         Formation formation = formationRepository.findById(request.getIdFormation())
                 .orElseThrow(() -> new RuntimeException("Formation not found"));
 
@@ -198,8 +215,8 @@ public class SessionFormationService {
                 .formation(formation)
                 .dateDebut(request.getDateDebut())
                 .dateFin(request.getDateFin())
-                .dHeures(request.getDHeures())
-                .dJours(request.getDJours())
+                .dHeures(positiveOr(request.getDHeures(), formation.getDureeHeures()))
+                .dJours(positiveOr(request.getDJours(), formation.getDureeJours()))
                 .statut(SessionFormationStatut.PLANIFIEE)
                 .formateur(request.getIdFormateur() != null
                         ? formateurRepository.findById(request.getIdFormateur()).orElse(null)
@@ -209,7 +226,13 @@ public class SessionFormationService {
                         ? entrepriseRepository.findById(request.getIdFournisseur()).orElse(null)
                         : null)
                 .lieu(request.getLieu())
+                .createdInEm(createdInEm)
                 .build();
+        syncSupplierTrainerConfirmation(session, true);
+        List<LocalDate> jours = (request.getJours() != null && !request.getJours().isEmpty())
+                ? request.getJours()
+                : expandRange(request.getDateDebut(), request.getDateFin());
+        applyJours(session, jours);
 
         String ref = generateReference(session);
         session.setReferenceSession(ref);
@@ -255,6 +278,8 @@ public class SessionFormationService {
     public SessionFormationResponseDto updateSession(Integer sessionId, UpdateSessionRequest request) {
         SessionFormation existing = repository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
+        Integer previousFormateurId = existing.getFormateur() != null ? existing.getFormateur().getIdFormateur() : null;
+        Integer previousSupplierId = existing.getFournisseur() != null ? existing.getFournisseur().getIdEntreprise() : null;
 
         if (request.referenceSession() != null && !request.referenceSession().isBlank()) {
             // Check uniqueness — reject if another session already has this ref
@@ -265,12 +290,16 @@ public class SessionFormationService {
             }
             existing.setReferenceSession(request.referenceSession());
         }
-        if (request.dHeures() != null) {
-            existing.setDHeures(request.dHeures());
-            existing.setDJours(request.dJours());
+        if (request.dHeures() != null) existing.setDHeures(request.dHeures());
+        if (request.dJours() != null) existing.setDJours(request.dJours());
+        if (request.jours() != null && !request.jours().isEmpty()) {
+            applyJours(existing, request.jours());
+        } else if (request.dateDebut() != null || request.dateFin() != null) {
+            // legacy callers that only send a range
+            if (request.dateDebut() != null) existing.setDateDebut(request.dateDebut());
+            if (request.dateFin() != null)   existing.setDateFin(request.dateFin());
+            applyJours(existing, expandRange(existing.getDateDebut(), existing.getDateFin()));
         }
-        if (request.dateDebut() != null)   existing.setDateDebut(request.dateDebut());
-        if (request.dateFin() != null)     existing.setDateFin(request.dateFin());
         if (request.idFormateur() != null)
             existing.setFormateur(formateurRepository.findById(request.idFormateur()).orElse(null));
         if (request.idEntreprise() != null)
@@ -279,8 +308,18 @@ public class SessionFormationService {
             existing.setFournisseur(entrepriseRepository.findById(request.idFournisseur()).orElse(null));
         if (request.idFormation() != null)
             existing.setFormation(formationRepository.findById(request.idFormation()).orElse(null));
+        if (existing.getFormation() != null) {
+            existing.setDHeures(positiveOr(existing.getDHeures(), existing.getFormation().getDureeHeures()));
+            existing.setDJours(positiveOr(existing.getDJours(), existing.getFormation().getDureeJours()));
+        }
         if (request.statut() != null) existing.setStatut(request.statut());
         if (request.lieu() != null)   existing.setLieu(request.lieu());
+
+        Integer currentFormateurId = existing.getFormateur() != null ? existing.getFormateur().getIdFormateur() : null;
+        Integer currentSupplierId = existing.getFournisseur() != null ? existing.getFournisseur().getIdEntreprise() : null;
+        boolean trainerOrSupplierChanged = !java.util.Objects.equals(previousFormateurId, currentFormateurId)
+                || !java.util.Objects.equals(previousSupplierId, currentSupplierId);
+        syncSupplierTrainerConfirmation(existing, trainerOrSupplierChanged);
 
         // Re-validate consistency whenever either side could have changed (or even if
         // neither did — cheap guard against any pre-existing inconsistent data).
@@ -374,6 +413,53 @@ public class SessionFormationService {
         auditRepository.save(audit);
     }
 
+
+    /* =========================
+   FORMATEUR CONFIRMATION
+   ========================= */
+
+    public SessionFormationResponseDto notifyFormateur(Integer sessionId) {
+        SessionFormation session = getSessionOrThrow(sessionId);
+
+        if (isSupplierOutsideS3m(session) && session.getFormateur() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La confirmation du formateur est automatique pour ce fournisseur.");
+        }
+
+        if (session.getNotificationEnvoyeeLe() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Une notification a déjà été envoyée à ce formateur. " +
+                            "Veuillez le contacter directement pour obtenir sa confirmation.");
+        }
+
+        var formateur = session.getFormateur();
+        if (formateur == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Aucun formateur n'est assigné à cette session.");
+        }
+        if (formateur.getEmail() == null || formateur.getEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ce formateur n'a pas d'adresse email enregistrée.");
+        }
+
+        emailNotificationService.sendFormateurConfirmationRequest(session, formateur);
+
+        session.setNotificationEnvoyeeLe(LocalDateTime.now());
+        return toDto(repository.save(session));
+    }
+
+    public SessionFormationResponseDto confirmFormateur(Integer sessionId) {
+        SessionFormation session = getSessionOrThrow(sessionId);
+
+        String adminEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        session.setFormateurConfirme(true);
+        session.setFormateurConfirmeLe(LocalDateTime.now());
+        session.setFormateurConfirmePar(adminEmail);
+
+        return toDto(repository.save(session));
+    }
+
     /* =========================
        DTO MAPPING
        ========================= */
@@ -386,6 +472,8 @@ public class SessionFormationService {
         // Map participations to ParticipantResponseDto
         List<ParticipantResponseDto> participants = session.getParticipations() != null
                 ? session.getParticipations().stream()
+                .filter(p -> !currentUserIsDepartmentChef() || (p.getEmploye().getDepartement() != null
+                        && requireCurrentDepartment().equals(p.getEmploye().getDepartement().getId())))
                 .map(p -> {
                     var e = p.getEmploye();
                     return new ParticipantResponseDto(
@@ -395,7 +483,8 @@ public class SessionFormationService {
                             e.getEmail(),
                             e.getTelephone(),
                             e.getCin(),
-                            e.getMatricule()
+                            e.getMatricule(),
+                            e.getDepartement() != null ? e.getDepartement().getNom() : null
                     );
                 })
                 .toList()
@@ -403,9 +492,14 @@ public class SessionFormationService {
 
         int count = participants.size();
 
-        // Facturation is a finance-only concept — hidden (null) from everyone
-        // else, including ADMIN, per the agreed access rules.
-        Boolean factureForResponse = currentUserIsFinance() ? session.getSessionFacturee() : null;
+        // The invoice state is visible to all users for row-color context;
+        // only ADMIN_FINANCE can change it (enforced by the controller).
+        Boolean factureForResponse = session.getSessionFacturee();
+        Boolean formateurInterne = session.getFormateur() != null
+                && session.getFormateur().getEntreprise() != null
+                && session.getEntreprise() != null
+                && session.getFormateur().getEntreprise().getIdEntreprise()
+                    .equals(session.getEntreprise().getIdEntreprise());
 
         return new SessionFormationResponseDto(
                 session.getIdSession(),
@@ -426,8 +520,38 @@ public class SessionFormationService {
                 count,
                 participants,
                 session.getLieu(),
-                factureForResponse
+                factureForResponse,
+                isSupplierOutsideS3m(session) && session.getFormateur() != null
+                        ? true : session.getFormateurConfirme(),
+                session.getNotificationEnvoyeeLe(),
+                session.getFormateurConfirmeLe(),
+                session.resolveJours(),
+                formateurInterne
         );
+    }
+
+    private boolean isSupplierOutsideS3m(SessionFormation session) {
+        return session.getFournisseur() != null
+                && session.getFournisseur().getNomEntreprise() != null
+                && !"S3M".equalsIgnoreCase(session.getFournisseur().getNomEntreprise().trim());
+    }
+
+    private void syncSupplierTrainerConfirmation(SessionFormation session, boolean assignmentChanged) {
+        if (isSupplierOutsideS3m(session) && session.getFormateur() != null) {
+            if (!Boolean.TRUE.equals(session.getFormateurConfirme())) {
+                session.setFormateurConfirme(true);
+                session.setFormateurConfirmeLe(LocalDateTime.now());
+                session.setFormateurConfirmePar("SYSTEM");
+            }
+            return;
+        }
+
+        if (assignmentChanged) {
+            session.setFormateurConfirme(false);
+            session.setFormateurConfirmeLe(null);
+            session.setFormateurConfirmePar(null);
+            session.setNotificationEnvoyeeLe(null);
+        }
     }
 
 
@@ -457,6 +581,28 @@ public class SessionFormationService {
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
         List<Participation> currentParticipations = session.getParticipations();
+        if (currentUserIsDepartmentChef()) {
+            Integer departmentId = requireCurrentDepartment();
+            if (!visibleToCurrentDepartmentChef(session)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée pour ce département.");
+            }
+            java.util.Set<Integer> currentIds = currentParticipations.stream()
+                    .map(p -> p.getEmploye().getIdEmploye()).collect(java.util.stream.Collectors.toSet());
+            if (!participantIds.containsAll(currentIds)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Un chef de département peut ajouter des participants, pas en retirer.");
+            }
+            for (Integer participantId : participantIds) {
+                Employe candidate = employeRepository.findById(participantId)
+                        .orElseThrow(() -> new EntityNotFoundException("Employe not found"));
+                if (!currentIds.contains(participantId)
+                        && (candidate.getDepartement() == null
+                        || !departmentId.equals(candidate.getDepartement().getId())
+                        || session.getEntreprise() == null
+                        || !session.getEntreprise().getIdEntreprise().equals(candidate.getEntreprise().getIdEntreprise()))) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous pouvez uniquement ajouter des employés de votre département.");
+                }
+            }
+        }
 
         // Remove participants not in the new list
         currentParticipations.stream()
@@ -538,6 +684,47 @@ public class SessionFormationService {
             }
         }
         return false;
+    }
+
+    private boolean currentUserIsDepartmentChef() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "CHEF_DEPARTEMENT".equals(a.getAuthority()));
+    }
+
+    private Integer requireCurrentDepartment() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Integer id = auth != null && auth.getDetails() instanceof AuthDetails details
+                ? details.getDepartementId() : null;
+        if (id == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Aucun département n'est associé à ce compte.");
+        return id;
+    }
+
+    private boolean visibleToCurrentDepartmentChef(SessionFormation session) {
+        if (!currentUserIsDepartmentChef()) return true;
+        Integer departmentId = requireCurrentDepartment();
+        return session.getParticipations() != null && session.getParticipations().stream()
+                .anyMatch(p -> p.getEmploye() != null && p.getEmploye().getDepartement() != null
+                        && departmentId.equals(p.getEmploye().getDepartement().getId()));
+    }
+
+    private List<LocalDate> expandRange(LocalDate debut, LocalDate fin) {
+        if (debut == null || fin == null || fin.isBefore(debut)) return List.of();
+        return debut.datesUntil(fin.plusDays(1)).toList();
+    }
+
+    private BigDecimal positiveOr(BigDecimal value, BigDecimal fallback) {
+        return value != null && value.compareTo(BigDecimal.ZERO) > 0 ? value : fallback;
+    }
+
+    // Single source of truth: dateDebut/dateFin always mirror the first/last selected day.
+    private void applyJours(SessionFormation session, java.util.Collection<LocalDate> jours) {
+        java.util.TreeSet<LocalDate> sorted = new java.util.TreeSet<>(jours);
+        if (sorted.isEmpty()) return;
+        session.getJoursSession().clear();
+        session.getJoursSession().addAll(sorted);
+        session.setDateDebut(sorted.first());
+        session.setDateFin(sorted.last());
     }
 
 }

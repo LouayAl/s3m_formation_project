@@ -22,7 +22,7 @@ public class SessionFormationController {
        READ
        ========================= */
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<SessionFormationResponseDto> getAllSessions(
             @RequestParam(required = false) Integer entrepriseId
     ) {
@@ -34,7 +34,7 @@ public class SessionFormationController {
     // Usage: GET /api/sessions/paginated?page=0&size=20&search=java&entrepriseId=4&years=2025,2026&statuts=EN_COURS,TERMINEE&facture=false
     // =========================
     @GetMapping("/paginated")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public Page<SessionFormationResponseDto> getSessionsPaginated(
             @RequestParam(required = false)              Integer entrepriseId, // only used for ADMIN / ADMIN_FINANCE
             @RequestParam(required = false)              String search,
@@ -71,7 +71,7 @@ public class SessionFormationController {
     // GET AVAILABLE YEARS (for the year-filter dropdown)
     // =========================
     @GetMapping("/years")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<Integer> getAvailableYears(
             @RequestParam(required = false) Integer entrepriseId // only used for ADMIN / ADMIN_FINANCE
     ) {
@@ -79,13 +79,13 @@ public class SessionFormationController {
     }
 
     @GetMapping("/formations/{formationId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','VISITOR','ADMIN_FINANCE')")
     public List<SessionFormationResponseDto> getByFormation(@PathVariable Integer formationId) {
         return service.getSessionsByFormation(formationId);
     }
 
     @GetMapping("/{sessionId}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public SessionFormationResponseDto getSession(@PathVariable Integer sessionId) {
         return service.getSession(sessionId);
     }
@@ -143,7 +143,7 @@ public class SessionFormationController {
 
     @PutMapping("/{sessionId}/participants")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER')")
     public void updateParticipants(@PathVariable Integer sessionId,
                                    @RequestBody List<Integer> participantIds) {
         service.updateParticipants(sessionId, participantIds);
@@ -156,6 +156,18 @@ public class SessionFormationController {
     @PreAuthorize("hasAuthority('ADMIN_FINANCE')")
     public SessionFormationResponseDto toggleFacture(@PathVariable Integer sessionId) {
         return service.toggleFacture(sessionId);
+    }
+
+    @PostMapping("/{sessionId}/formateur/notify")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public SessionFormationResponseDto notifyFormateur(@PathVariable Integer sessionId) {
+        return service.notifyFormateur(sessionId);
+    }
+
+    @PostMapping("/{sessionId}/formateur/confirm")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public SessionFormationResponseDto confirmFormateur(@PathVariable Integer sessionId) {
+        return service.confirmFormateur(sessionId);
     }
 
 }

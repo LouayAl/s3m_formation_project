@@ -4,7 +4,10 @@ import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.participation.ParticipationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.security.util.AuthDetails;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,6 +38,7 @@ public class PresenceService {
     // ── GET: presence for a given day ─────────────────────────────────────────
     @Transactional(readOnly = true)
     public PresenceJourResponse getPresenceForDay(Integer sessionId, LocalDate jour) {
+        ensureVisibleToCurrentUser(sessionId);
 
         // Load all participations for the session
         List<Participation> participations = participationRepo
@@ -49,6 +53,7 @@ public class PresenceService {
                 ));
 
         List<PresenceJourDto> dtos = participations.stream()
+                .filter(this::visibleParticipation)
                 .map(part -> {
                     var emp = part.getEmploye();
                     return new PresenceJourDto(
@@ -58,6 +63,7 @@ public class PresenceService {
                             emp.getPrenom(),
                             emp.getCin(),
                             emp.getMatricule(),
+                            emp.getDepartement() != null ? emp.getDepartement().getNom() : null,
                             presenceMap.get(part.getIdParticipation()) // null if not yet recorded
                     );
                 })
@@ -69,6 +75,7 @@ public class PresenceService {
     // ── GET: all days that have presence records ───────────────────────────────
     @Transactional(readOnly = true)
     public PresenceDaysResponse getRecordedDays(Integer sessionId) {
+        ensureVisibleToCurrentUser(sessionId);
         List<LocalDate> jours = presenceRepo.findJoursBySession(sessionId);
         return new PresenceDaysResponse(sessionId, jours);
     }
@@ -80,6 +87,7 @@ public class PresenceService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Session non trouvée"));
 
+        ensureVisibleToCurrentUser(sessionId);
         if (session.getDateDebut() == null || session.getDateFin() == null) return List.of();
 
         List<LocalDate> days = new ArrayList<>();
@@ -99,6 +107,7 @@ public class PresenceService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée");
         }
 
+        ensureVisibleToCurrentUser(sessionId);
         for (SavePresenceRequest.PresenceEntry entry : req.presences()) {
             Participation participation = participationRepo
                     .findById(entry.participationId())
@@ -110,6 +119,11 @@ public class PresenceService {
             if (!participation.getSession().getIdSession().equals(sessionId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Participation " + entry.participationId() + " n'appartient pas à cette session.");
+            }
+
+            if (!visibleParticipation(participation)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "Vous pouvez uniquement gérer la présence des employés de votre département.");
             }
 
             // Upsert
@@ -125,5 +139,31 @@ public class PresenceService {
         }
 
         return getPresenceForDay(sessionId, req.jour());
+    }
+
+    private boolean isDepartmentChef() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "CHEF_DEPARTEMENT".equals(a.getAuthority()));
+    }
+
+    private boolean visibleParticipation(Participation participation) {
+        if (!isDepartmentChef()) return true;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        AuthDetails details = auth != null && auth.getDetails() instanceof AuthDetails d ? d : null;
+        return details != null && details.getDepartementId() != null
+                && participation.getEmploye() != null && participation.getEmploye().getDepartement() != null
+                && details.getDepartementId().equals(participation.getEmploye().getDepartement().getId())
+                && details.getEntrepriseId() != null && participation.getEmploye().getEntreprise() != null
+                && details.getEntrepriseId().equals(participation.getEmploye().getEntreprise().getIdEntreprise());
+    }
+
+    private void ensureVisibleToCurrentUser(Integer sessionId) {
+        if (!isDepartmentChef()) return;
+        boolean hasOwnParticipant = participationRepo.findBySession_IdSession(sessionId).stream()
+                .anyMatch(this::visibleParticipation);
+        if (!hasOwnParticipant) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée pour ce département.");
+        }
     }
 }

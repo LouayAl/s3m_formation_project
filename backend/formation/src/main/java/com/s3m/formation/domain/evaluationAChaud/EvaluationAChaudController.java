@@ -67,9 +67,18 @@ public class EvaluationAChaudController {
 
     @GetMapping("/api/evaluation-a-chaud/summary")
     public ResponseEntity<List<EvaluationSummaryDto>> getSummary(
+            @RequestParam(required = false) Integer entrepriseId,
             org.springframework.security.core.Authentication auth) {
-        Integer entrepriseId = auth.getDetails() instanceof AuthDetails details ? details.getEntrepriseId() : null;
-        return ResponseEntity.ok(service.getSummaryForEntreprise(entrepriseId));
+        boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+        Integer effectiveId;
+        if (isAdmin) {
+            effectiveId = entrepriseId; // null = all, specific id = filtered
+        } else {
+            effectiveId = auth.getDetails() instanceof AuthDetails details
+                    ? details.getEntrepriseId() : null;
+        }
+        return ResponseEntity.ok(service.getSummaryForEntreprise(effectiveId));
     }
 
     // Returns the hardcoded formulaire questions (used by public form)

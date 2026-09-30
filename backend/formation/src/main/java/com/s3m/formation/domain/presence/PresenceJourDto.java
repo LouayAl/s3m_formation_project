@@ -7,6 +7,7 @@ public record PresenceJourDto(
         String  prenom,
         String  cin,
         String  matricule,
+        String  departementNom,
         Boolean present
 ) {
 }

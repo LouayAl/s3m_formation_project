@@ -1,6 +1,8 @@
 package com.s3m.formation.domain.besoinFormation;
 
 import com.s3m.formation.domain.entreprise.Entreprise;
+import com.s3m.formation.domain.departement.Departement;
+import com.s3m.formation.auth.model.User;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,6 +26,20 @@ public class BesoinFormation {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_entreprise", nullable = false)
     private Entreprise entreprise;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_departement")
+    private Departement departement;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "requested_by_user_id")
+    private User requestedBy;
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
 
     @Column(name = "dept", length = 100)
     private String dept;
@@ -76,6 +92,7 @@ public class BesoinFormation {
 
     @PrePersist
     void onCreate() {
+        if (this.status == null) this.status = "PENDING";
         this.dateCreation = LocalDateTime.now();
         this.dateModification = this.dateCreation;
     }

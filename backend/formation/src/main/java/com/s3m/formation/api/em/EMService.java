@@ -10,6 +10,8 @@ import com.s3m.formation.domain.evaluation.EvaluationRepository;
 import com.s3m.formation.domain.formation.FormationRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.domain.sessionFormation.SessionFormationService;
+import com.s3m.formation.domain.sessionFormation.CreateSessionRequest;
 import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 import com.s3m.formation.security.util.AuthDetails;
 import com.s3m.formation.security.util.SecurityContextUtils;
@@ -49,6 +51,7 @@ public class EMService {
     private final EvaluationCritereRepository evalCritereRepo;
     private final SessionDailyProgramRepository dailyProgramRepo;
     private final FormationRepository formationRepo;
+    private final SessionFormationService sessionFormationService;
 
     // ─── Dashboard KPIs ──────────────────────────────────────────────────────
     public EMDashboardKpiDto getDashboardKpis() {
@@ -57,8 +60,8 @@ public class EMService {
         Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         List<SessionFormation> allSessions = sessionRepo.search(
-                null, null, entrepriseId, null, null
-        );
+                null, null, entrepriseId, null, null, true
+        ).stream().filter(SessionFormation::isCreatedInEm).toList();
 
         long enCours    = allSessions.stream().filter(s -> SessionFormationStatut.EN_COURS.equals(s.getStatut())).count();
         long terminees  = allSessions.stream().filter(s -> SessionFormationStatut.TERMINEE.equals(s.getStatut())).count();
@@ -284,10 +287,16 @@ public class EMService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
-        return sessionRepo.search(null, null, entrepriseId, null, null)
+        return sessionRepo.search(null, null, entrepriseId, null, null, true)
                 .stream()
+                .filter(SessionFormation::isCreatedInEm)
                 .map(this::toSessionDto)
                 .toList();
+    }
+
+    @Transactional
+    public SessionFormationResponseDto createSessionFromEm(CreateSessionRequest request) {
+        return toSessionDto(sessionFormationService.createEmSession(request));
     }
 
     public SessionFormationResponseDto getSessionForCurrentUser(Integer sessionId) {
@@ -298,7 +307,7 @@ public class EMService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Session non trouvée"));
 
-        if (session.getEntreprise() == null ||
+        if (!session.isCreatedInEm() || session.getEntreprise() == null ||
                 !session.getEntreprise().getIdEntreprise().equals(entrepriseId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Accès refusé à cette session");
@@ -355,6 +364,7 @@ public class EMService {
 
         return sessionRepo.findByFormateur_IdFormateur(formateur.getIdFormateur())
                 .stream()
+                .filter(SessionFormation::isCreatedInEm)
                 .map(this::toSessionDto)
                 .toList();
     }
@@ -553,7 +563,8 @@ public class EMService {
             var e = p.getEmploye();
             return new ParticipantResponseDto(
                     e.getIdEmploye(), e.getNom(), e.getPrenom(),
-                    e.getEmail(), e.getTelephone(), e.getCin(), e.getMatricule()
+                    e.getEmail(), e.getTelephone(), e.getCin(), e.getMatricule(),
+                    e.getDepartement() != null ? e.getDepartement().getNom() : null
             );
         }).toList()
                 : List.of();
@@ -577,7 +588,14 @@ public class EMService {
                 participants.size(),
                 participants,
                 s.getLieu(),
-                null
+                s.getSessionFacturee(),
+                s.getFormateurConfirme(),          // NEW
+                s.getNotificationEnvoyeeLe(),      // NEW
+                s.getFormateurConfirmeLe(),        // NEW
+                s.resolveJours(),
+                s.getFormateur() != null && s.getFormateur().getEntreprise() != null
+                        && s.getEntreprise() != null
+                        && s.getFormateur().getEntreprise().getIdEntreprise().equals(s.getEntreprise().getIdEntreprise())
         );
     }
 }

@@ -4,6 +4,7 @@ import com.s3m.formation.domain.sessionFormation.SessionFormationStatut;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public record UpdateSessionRequest(
         BigDecimal dHeures,
@@ -16,6 +17,7 @@ public record UpdateSessionRequest(
         Integer idFormation,
         SessionFormationStatut statut,
         String lieu,
-        String referenceSession
+        String referenceSession,
+        List<LocalDate> jours
 ) {
 }

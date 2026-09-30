@@ -22,6 +22,10 @@ public record BesoinFormationResponseDto(
         BigDecimal budgetEstimatif,
         String remarques,
         LocalDateTime dateCreation,
-        LocalDateTime dateModification
+        LocalDateTime dateModification,
+        Integer departementId,
+        String demandeur,
+        String status,
+        String rejectionReason
 ) {
 }

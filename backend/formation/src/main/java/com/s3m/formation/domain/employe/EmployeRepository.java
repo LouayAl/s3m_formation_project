@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface EmployeRepository extends JpaRepository<Employe, Integer> {
 
     List<Employe> findByEntreprise_IdEntreprise(Integer idEntreprise);
+    List<Employe> findByEntreprise_IdEntrepriseAndDepartement_Id(Integer idEntreprise, Integer departementId);
     boolean existsByEntreprise_IdEntreprise(Integer idEntreprise);
     Optional<Employe> findByEmail(String email);
     boolean existsByEmail(String email);
@@ -44,6 +45,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
     @Query("""
     SELECT e FROM Employe e
     WHERE (:entrepriseId IS NULL OR e.entreprise.idEntreprise = :entrepriseId)
+      AND (:departementId IS NULL OR e.departement.id = :departementId)
       AND (
         :search IS NULL OR :search = ''
         OR LOWER(e.nom)       LIKE LOWER(CONCAT('%', :search, '%'))
@@ -54,6 +56,7 @@ public interface EmployeRepository extends JpaRepository<Employe, Integer> {
 """)
     Page<Employe> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("search") String search,
             Pageable pageable
     );

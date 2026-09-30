@@ -29,6 +29,7 @@ public interface SessionFormationRepository
           and (:entrepriseId is null or e.idEntreprise = :entrepriseId)
           and (:startDate is null or s.dateDebut >= :startDate)
           and (:endDate is null or s.dateFin <= :endDate)
+          and s.createdInEm = false
         order by s.dateDebut desc
     """)
     List<SessionFormation> adminSearch(
@@ -92,6 +93,7 @@ public interface SessionFormationRepository
           AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
           AND (:startDate IS NULL OR s.dateDebut >= :startDate)
           AND (:endDate IS NULL OR s.dateFin <= :endDate)
+          AND (:createdInEm IS NULL OR s.createdInEm = :createdInEm)
         ORDER BY s.dateDebut DESC
     """)
     List<SessionFormation> search(
@@ -99,7 +101,8 @@ public interface SessionFormationRepository
             @Param("formationId") Integer formationId,
             @Param("entrepriseId") Integer entrepriseId,
             @Param("startDate") LocalDate startDate,
-            @Param("endDate") LocalDate endDate
+            @Param("endDate") LocalDate endDate,
+            @Param("createdInEm") Boolean createdInEm
     );
 
     boolean existsByFormation_IdFormation(Integer idFormation);
@@ -124,6 +127,7 @@ public interface SessionFormationRepository
         WHERE s.entreprise.idEntreprise = :entrepriseId
           AND s.dateDebut >= :start
           AND s.dateDebut <= :end
+          AND s.createdInEm = false
         ORDER BY s.dateDebut ASC
     """)
     List<SessionFormation> findTermineesForEntrepriseAndYear(
@@ -131,7 +135,8 @@ public interface SessionFormationRepository
             @Param("start")        LocalDate start,
             @Param("end")          LocalDate end
     );
-    List<SessionFormation> findByEntreprise_IdEntreprise(Integer entrepriseId);
+    @Query("SELECT s FROM SessionFormation s WHERE s.entreprise.idEntreprise = :entrepriseId AND s.createdInEm = false")
+    List<SessionFormation> findByEntreprise_IdEntreprise(@Param("entrepriseId") Integer entrepriseId);
     boolean existsByReferenceSessionAndIdSessionNot(String referenceSession, Integer idSession);
 
     // ==============================
@@ -160,12 +165,18 @@ LEFT JOIN s.formateur fo
 LEFT JOIN s.entreprise e
 LEFT JOIN s.fournisseur fu
 WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+  AND s.createdInEm = false
+  AND (:departementId IS NULL OR EXISTS (
+        SELECT pScope.id FROM Participation pScope
+        WHERE pScope.session = s AND pScope.employe.departement.id = :departementId
+      ))
   AND (:search IS NULL OR :search = ''
        OR LOWER(f.module) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
        OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
   AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
   AND (:statuts IS NULL OR s.statut IN :statuts)
   AND (:facture IS NULL OR s.sessionFacturee = :facture)
+  AND (:excludeEmFormations = false OR f.sousFamille IS NULL OR UPPER(TRIM(f.sousFamille)) <> 'EM')
   AND (
         :colField IS NULL
      OR :colFilter IS NULL
@@ -182,10 +193,12 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
 """)
     Page<SessionFormation> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
+            @Param("departementId") Integer departementId,
             @Param("search")       String search,
             @Param("years")        List<Integer> years,
             @Param("statuts")      List<SessionFormationStatut> statuts,
             @Param("facture")      Boolean facture,
+            @Param("excludeEmFormations") boolean excludeEmFormations,
             @Param("colField")     String colField,
             @Param("colFilter")    String colFilter,
             Pageable pageable
@@ -196,10 +209,16 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
     @Query("""
         SELECT s.dateDebut
         FROM SessionFormation s
+        JOIN s.formation f
         WHERE s.dateDebut IS NOT NULL
           AND (:entrepriseId IS NULL OR s.entreprise.idEntreprise = :entrepriseId)
+          AND s.createdInEm = false
+          AND (:excludeEmFormations = false OR f.sousFamille IS NULL OR UPPER(TRIM(f.sousFamille)) <> 'EM')
     """)
-    List<LocalDate> findAllDateDebuts(@Param("entrepriseId") Integer entrepriseId);
+    List<LocalDate> findAllDateDebuts(
+            @Param("entrepriseId") Integer entrepriseId,
+            @Param("excludeEmFormations") boolean excludeEmFormations
+    );
 
     // Used by SessionFormationStatusScheduler — avoids loading TERMINEE/ANNULEE
     // sessions every night since they can never auto-transition further.
@@ -218,6 +237,7 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
           AND s.dateDebut >= :start
           AND s.dateDebut <= :end
           AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+          AND s.createdInEm = false
         ORDER BY s.dateDebut ASC
     """)
     List<SessionFormation> findByStatutAndDateDebutBetweenAndEntreprise(
@@ -243,6 +263,7 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
           AND s.dateDebut <= :end
           AND s.dateFin >= :start
           AND (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+          AND s.createdInEm = false
         ORDER BY s.dateDebut ASC
     """)
     List<SessionFormation> findByStatutOverlappingRangeAndEntreprise(

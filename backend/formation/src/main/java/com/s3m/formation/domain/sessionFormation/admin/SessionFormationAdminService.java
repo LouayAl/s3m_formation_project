@@ -9,6 +9,7 @@ import com.s3m.formation.domain.sessionFormation.SessionFormation;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
 import com.s3m.formation.domain.sessionFormation.admin.dto.SessionFormationAdminUpdateRequest;
 import lombok.RequiredArgsConstructor;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,8 @@ public class SessionFormationAdminService {
         SessionFormation session = sessionRepository.findById(sessionId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Session not found"));
+        Integer previousFormateurId = session.getFormateur() != null ? session.getFormateur().getIdFormateur() : null;
+        Integer previousSupplierId = session.getFournisseur() != null ? session.getFournisseur().getIdEntreprise() : null;
 
         /* =========================
            UPDATE FORMATEUR
@@ -70,6 +73,27 @@ public class SessionFormationAdminService {
 
             throw new IllegalStateException(
                     "dateDebut must be before or equal to dateFin");
+        }
+
+        Integer currentFormateurId = session.getFormateur() != null ? session.getFormateur().getIdFormateur() : null;
+        Integer currentSupplierId = session.getFournisseur() != null ? session.getFournisseur().getIdEntreprise() : null;
+        boolean assignmentChanged = !java.util.Objects.equals(previousFormateurId, currentFormateurId)
+                || !java.util.Objects.equals(previousSupplierId, currentSupplierId);
+        boolean supplierOutsideS3m = session.getFournisseur() != null
+                && session.getFournisseur().getNomEntreprise() != null
+                && !"S3M".equalsIgnoreCase(session.getFournisseur().getNomEntreprise().trim());
+
+        if (supplierOutsideS3m && session.getFormateur() != null) {
+            if (!Boolean.TRUE.equals(session.getFormateurConfirme())) {
+                session.setFormateurConfirme(true);
+                session.setFormateurConfirmeLe(LocalDateTime.now());
+                session.setFormateurConfirmePar("SYSTEM");
+            }
+        } else if (assignmentChanged) {
+            session.setFormateurConfirme(false);
+            session.setFormateurConfirmeLe(null);
+            session.setFormateurConfirmePar(null);
+            session.setNotificationEnvoyeeLe(null);
         }
     }
 

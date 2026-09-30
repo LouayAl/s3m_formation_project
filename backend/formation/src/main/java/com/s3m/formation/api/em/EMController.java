@@ -3,6 +3,7 @@
     import com.s3m.formation.api.dto.*;
     import com.s3m.formation.domain.critereTemplate.CritereTemplateType;
     import com.s3m.formation.domain.critereTemplate.CritereTemplateService;
+    import com.s3m.formation.domain.sessionFormation.CreateSessionRequest;
 
     import lombok.RequiredArgsConstructor;
     import org.springframework.http.HttpStatus;
@@ -105,6 +106,13 @@
         @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR')")
         public List<SessionFormationResponseDto> getSessionsForCurrentUser() {
             return emService.getSessionsForCurrentUser();
+        }
+
+        @PostMapping("/sessions")
+        @ResponseStatus(HttpStatus.CREATED)
+        @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER')")
+        public SessionFormationResponseDto createSessionFromEm(@RequestBody CreateSessionRequest request) {
+            return emService.createSessionFromEm(request);
         }
 
         // GET /api/em/sessions/{sessionId}

@@ -173,8 +173,11 @@ public class EvaluationAChaudService {
 
     @Transactional(readOnly = true)
     public List<EvaluationSummaryDto> getSummaryForEntreprise(Integer entrepriseId) {
-        return sessionRepository.findByEntreprise_IdEntreprise(entrepriseId)
-                .stream()
+        List<SessionFormation> sessions = entrepriseId == null
+                ? sessionRepository.findAll()
+                : sessionRepository.findByEntreprise_IdEntreprise(entrepriseId);
+
+        return sessions.stream()
                 .map(session -> {
                     List<EvaluationAChaud> evals =
                             repository.findBySession_IdSession(session.getIdSession());
@@ -203,12 +206,12 @@ public class EvaluationAChaudService {
                     return new EvaluationSummaryDto(
                             session.getIdSession(),
                             session.getReferenceSession(),
-                            session.getFormation() != null
-                                    ? session.getFormation().getModule() : "",
-                            formateurNomComplet(session),
+                            session.getFormation() != null ? session.getFormation().getModule() : "",
+                            session.getFormateur() != null
+                                    ? session.getFormateur().getNom() + " " + session.getFormateur().getPrenom() : "",
+                            session.getEntreprise() != null ? session.getEntreprise().getNomEntreprise() : "",
                             evals.size(),
-                            session.getParticipations() != null
-                                    ? session.getParticipations().size() : 0,
+                            session.getParticipations() != null ? session.getParticipations().size() : 0,
                             moyenneGlobale,
                             derniere
                     );

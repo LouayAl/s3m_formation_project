@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface BesoinFormationRepository extends JpaRepository<BesoinFormation, Integer> {
     List<BesoinFormation> findByEntreprise_IdEntreprise(Integer entrepriseId);
+    List<BesoinFormation> findByEntreprise_IdEntrepriseAndDepartement_Id(Integer entrepriseId, Integer departementId);
 }

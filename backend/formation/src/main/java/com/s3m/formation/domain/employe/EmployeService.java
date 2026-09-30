@@ -6,6 +6,7 @@ import com.s3m.formation.domain.departement.DepartementRepository;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.security.util.AuthDetails;
+import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -57,6 +58,12 @@ public class EmployeService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
+        if (currentUserIsDepartmentChef()) {
+            Integer departementId = requireCurrentDepartment();
+            return employeRepository.findByEntreprise_IdEntrepriseAndDepartement_Id(entrepriseId, departementId)
+                    .stream().map(this::toDto).toList();
+        }
+
         return employeRepository.findByEntreprise_IdEntreprise(entrepriseId)
                 .stream()
                 .map(this::toDto)
@@ -79,6 +86,7 @@ public class EmployeService {
                 SecurityContextHolder.getContext().getAuthentication();
 
         Integer userEntrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
+        Integer departmentId = currentUserIsDepartmentChef() ? requireCurrentDepartment() : null;
 
         boolean isManager = auth.getAuthorities()
                 .stream()
@@ -87,6 +95,7 @@ public class EmployeService {
         if (isManager) {
             entrepriseId = userEntrepriseId;
         }
+        if (currentUserIsDepartmentChef()) entrepriseId = userEntrepriseId;
 
         Sort.Direction direction =
                 "desc".equalsIgnoreCase(sortDir)
@@ -127,7 +136,7 @@ public class EmployeService {
         );
 
         return employeRepository
-                .findPaginated(entrepriseId, search, pageable)
+                .findPaginated(entrepriseId, departmentId, search, pageable)
                 .map(this::toDto);
     }
 
@@ -139,11 +148,19 @@ public class EmployeService {
         Employe employe = employeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Employé non trouvé"));
+        assertVisibleToDepartmentChef(employe);
         return toDto(employe);
     }
 
     public List<EmployeResponseDto> searchEmployes(String keyword) {
-        return employeRepository.search(keyword)
+        List<Employe> employes = currentUserIsDepartmentChef()
+                ? employeRepository.findByEntreprise_IdEntrepriseAndDepartement_Id(
+                    SecurityContextUtils.getEntrepriseId(), requireCurrentDepartment()).stream()
+                    .filter(e -> contains(e.getNom(), keyword) || contains(e.getPrenom(), keyword)
+                            || contains(e.getEmail(), keyword) || contains(e.getCin(), keyword)
+                            || contains(e.getMatricule(), keyword)).toList()
+                : employeRepository.search(keyword);
+        return employes
                 .stream()
                 .map(this::toDto)
                 .toList();
@@ -486,5 +503,30 @@ public class EmployeService {
             }
         }
         return false;
+    }
+
+    private boolean currentUserIsDepartmentChef() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "CHEF_DEPARTEMENT".equals(a.getAuthority()));
+    }
+
+    private Integer requireCurrentDepartment() {
+        Integer id = SecurityContextUtils.getDepartementId();
+        if (id == null) throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Aucun département n'est associé à ce compte.");
+        return id;
+    }
+
+    private void assertVisibleToDepartmentChef(Employe employe) {
+        if (currentUserIsDepartmentChef() && (employe.getDepartement() == null
+                || !requireCurrentDepartment().equals(employe.getDepartement().getId())
+                || employe.getEntreprise() == null
+                || !SecurityContextUtils.getEntrepriseId().equals(employe.getEntreprise().getIdEntreprise()))) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Employé non trouvé");
+        }
+    }
+
+    private boolean contains(String value, String keyword) {
+        return value != null && keyword != null && value.toLowerCase().contains(keyword.toLowerCase());
     }
 }

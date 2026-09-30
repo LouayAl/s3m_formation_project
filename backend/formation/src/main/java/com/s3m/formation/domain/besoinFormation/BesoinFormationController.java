@@ -2,6 +2,7 @@ package com.s3m.formation.domain.besoinFormation;
 
 import com.s3m.formation.api.dto.BesoinFormationRequest;
 import com.s3m.formation.api.dto.BesoinFormationResponseDto;
+import com.s3m.formation.api.dto.BesoinDecisionRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,7 +22,7 @@ public class BesoinFormationController {
     // entrepriseId param only has effect for ADMIN.
     // =========================
     @GetMapping
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public List<BesoinFormationResponseDto> getAll(
             @RequestParam(required = false) Integer entrepriseId
     ) {
@@ -29,29 +30,35 @@ public class BesoinFormationController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public BesoinFormationResponseDto getById(@PathVariable Integer id) {
         return besoinFormationService.getBesoinById(id);
     }
 
     // =========================
-    // CREATE / UPDATE / DELETE — ADMIN only
+    // Create: admins may add approved catalogue rows; department heads may submit requests.
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','CHEF_DEPARTEMENT')")
     public BesoinFormationResponseDto create(@RequestBody BesoinFormationRequest request) {
         return besoinFormationService.createBesoin(request);
     }
 
+    @PatchMapping("/{id}/decision")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public BesoinFormationResponseDto decide(@PathVariable Integer id, @RequestBody BesoinDecisionRequest request) {
+        return besoinFormationService.decideBesoin(id, request);
+    }
+
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ADMIN_FINANCE')")
     public BesoinFormationResponseDto update(@PathVariable Integer id, @RequestBody BesoinFormationRequest request) {
         return besoinFormationService.updateBesoin(id, request);
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','ADMIN_FINANCE')")
     public void delete(@PathVariable Integer id) {
         besoinFormationService.deleteBesoin(id);
     }
