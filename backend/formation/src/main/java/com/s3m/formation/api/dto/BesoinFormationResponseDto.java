@@ -26,6 +26,9 @@ public record BesoinFormationResponseDto(
         Integer departementId,
         String demandeur,
         String status,
-        String rejectionReason
+        String rejectionReason,
+        String demandeurRole,
+        Long demandeurUserId,
+        boolean nouvelleFormation
 ) {
 }

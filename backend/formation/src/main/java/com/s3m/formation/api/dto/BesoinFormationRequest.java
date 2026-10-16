@@ -6,6 +6,7 @@ public record BesoinFormationRequest(
         Integer idEntreprise,
         String dept,
         String intitule,
+        Boolean nouvelleFormation,
         String populationCible,
         Integer nbCadre,
         Integer nbTam,

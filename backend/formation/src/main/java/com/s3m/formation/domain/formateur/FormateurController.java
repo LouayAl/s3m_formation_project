@@ -15,10 +15,7 @@ public class FormateurController {
     private final FormateurService formateurService;
 
     // ── Existing — unchanged, active-only, no role gate ─────────────────────
-    @GetMapping
-    public List<Formateur> getAllFormateurs() {
-        return formateurService.getAllActiveFormateurs();
-    }
+
 
     @GetMapping("/entreprise/{id}")
     public List<Formateur> getFormateursByEntreprise(@PathVariable Integer id) {
@@ -53,5 +50,10 @@ public class FormateurController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public void deleteFormateur(@PathVariable Integer id) {
         formateurService.deleteFormateur(id);
+    }
+
+    @GetMapping
+    public List<FormateurResponseDto> getAllFormateurs() {
+        return formateurService.getAllActiveFormateursDto();
     }
 }

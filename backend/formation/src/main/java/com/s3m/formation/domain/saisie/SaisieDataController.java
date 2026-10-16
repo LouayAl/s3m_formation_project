@@ -7,7 +7,7 @@ import com.s3m.formation.domain.employe.EmployeService;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.formateur.Formateur;
-import com.s3m.formation.domain.formateur.FormateurRepository;
+import com.s3m.formation.domain.formateur.FormateurService;
 import com.s3m.formation.domain.formation.FormationService;
 import lombok.*;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +21,7 @@ public class SaisieDataController {
 
     private final FormationService formationService;
     private final EntrepriseRepository entrepriseRepository;
-    private final FormateurRepository formateurRepository;
+    private final FormateurService formateurService;
     private final EmployeService employeService;
 
     @GetMapping("/formations")
@@ -45,11 +45,11 @@ public class SaisieDataController {
 
     @GetMapping("/formateurs")
     public List<Formateur> getAllFormateurs() {
-        return formateurRepository.findAll();
+        return formateurService.getAllVisibleFormateurs();
     }
 
     @GetMapping("/formateurs/by-entreprise/{id}")
     public List<Formateur> getFormateursByEntreprise(@PathVariable("id") Integer entrepriseId) {
-        return formateurRepository.findByEntreprise_IdEntreprise(entrepriseId);
+        return formateurService.getFormateursByEntreprise(entrepriseId);
     }
 }

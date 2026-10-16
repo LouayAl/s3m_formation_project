@@ -3,8 +3,11 @@ package com.s3m.formation.domain.formateur;
 import com.s3m.formation.domain.entreprise.Entreprise;
 import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.sessionFormation.SessionFormationRepository;
+import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -21,24 +24,60 @@ public class FormateurService {
 
     // ── Existing methods, unchanged — still used wherever an active-only list is needed ──
     public List<Formateur> getAllActiveFormateurs() {
-        return formateurRepository.findByActifTrue();
+        if (canViewAllEntreprises()) return formateurRepository.findByActifTrue();
+        return getAllVisibleFormateurs().stream()
+                .filter(formateur -> Boolean.TRUE.equals(formateur.getActif()))
+                .toList();
+    }
+
+    public List<Formateur> getAllVisibleFormateurs() {
+        if (canViewAllEntreprises()) return formateurRepository.findAll();
+        Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
+        if (entrepriseId == null) return List.of();
+        return formateurRepository.findByEntreprise_IdEntreprise(entrepriseId);
     }
 
     public List<Formateur> getFormateursByEntreprise(Integer entrepriseId) {
+        ensureEntrepriseAccess(entrepriseId);
         return formateurRepository.findByEntreprise_IdEntreprise(entrepriseId);
     }
 
     public Formateur getFormateurById(Integer id) {
-        return formateurRepository.findById(id).orElse(null);
+        Formateur formateur = formateurRepository.findById(id).orElse(null);
+        if (formateur != null && formateur.getEntreprise() != null) {
+            ensureEntrepriseAccess(formateur.getEntreprise().getIdEntreprise());
+        }
+        return formateur;
     }
 
     // ── CRUD for the admin management page ──────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<FormateurResponseDto> getAllFormateursForManagement() {
-        return formateurRepository.findAll().stream()
+        return getAllVisibleFormateurs().stream()
                 .map(this::toDto)
                 .toList();
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<FormateurResponseDto> getAllActiveFormateursDto() {
+        return getAllActiveFormateurs().stream().map(this::toDto).toList();
+    }
+
+    private boolean canViewAllEntreprises() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(authority -> "ADMIN".equals(authority.getAuthority())
+                        || "ADMIN_FINANCE".equals(authority.getAuthority()));
+    }
+
+    private void ensureEntrepriseAccess(Integer entrepriseId) {
+        if (!canViewAllEntreprises()
+                && !java.util.Objects.equals(entrepriseId, SecurityContextUtils.getEntrepriseId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Vous ne pouvez consulter que les formateurs de votre entreprise.");
+        }
     }
 
     @Transactional

@@ -41,6 +41,10 @@ public class BesoinFormation {
     @Column(name = "rejection_reason", columnDefinition = "TEXT")
     private String rejectionReason;
 
+    @Builder.Default
+    @Column(name = "nouvelle_formation", nullable = false)
+    private boolean nouvelleFormation = false;
+
     @Column(name = "dept", length = 100)
     private String dept;
 

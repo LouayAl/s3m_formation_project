@@ -4,10 +4,12 @@ import com.s3m.formation.api.dto.SessionFormationResponseDto;
 import com.s3m.formation.api.dto.UpdateSessionRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,6 +45,8 @@ public class SessionFormationController {
             @RequestParam(required = false)              Boolean facture,      // finance view only — ignored server-side for everyone else
             @RequestParam(required = false)              String filterField,
             @RequestParam(required = false)              String filterValue,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "0")            int page,
             @RequestParam(defaultValue = "20")           int size,
             @RequestParam(defaultValue = "idSession")    String sortBy,
@@ -64,7 +68,7 @@ public class SessionFormationController {
                 .map(SessionFormationStatut::valueOf)
                 .toList();
 
-        return service.getSessionsPaginated(entrepriseId, search, yearsList, statutsList, facture, page, size, sortBy, sortDir, filterField, filterValue);
+        return service.getSessionsPaginated(entrepriseId, search, yearsList, statutsList, facture, page, size, sortBy, sortDir, filterField, filterValue, startDate, endDate);
     }
 
     // =========================

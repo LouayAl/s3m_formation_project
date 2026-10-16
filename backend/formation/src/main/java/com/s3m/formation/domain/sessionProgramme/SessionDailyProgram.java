@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.sessionProgramme;
 
 import com.s3m.formation.domain.sessionFormation.SessionFormation;
+import com.s3m.formation.domain.employe.Employe;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +11,7 @@ import java.util.List;
 @Entity
 @Table(
         name = "session_daily_program",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"id_session", "jour"})
+        uniqueConstraints = @UniqueConstraint(columnNames = {"id_session", "jour", "id_employe"})
 )
 @Getter
 @Setter
@@ -26,6 +27,10 @@ public class SessionDailyProgram {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_session", nullable = false)
     private SessionFormation session;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_employe")
+    private Employe employe;
 
     @Column(nullable = false)
     private Integer jour;

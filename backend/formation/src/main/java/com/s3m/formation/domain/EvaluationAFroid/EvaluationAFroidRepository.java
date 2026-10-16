@@ -6,5 +6,7 @@ import java.util.List;
 
 public interface EvaluationAFroidRepository extends JpaRepository<EvaluationAFroid, Integer> {
     List<EvaluationAFroid> findByParticipation_Session_Demande_Entreprise_IdEntreprise(Integer clientId);
+
+    void deleteByParticipation_Session_IdSession(Integer sessionId);
 }
 

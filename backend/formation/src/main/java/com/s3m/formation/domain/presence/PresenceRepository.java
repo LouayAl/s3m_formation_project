@@ -36,6 +36,8 @@ public interface PresenceRepository extends JpaRepository<Presence, Integer> {
     Optional<Presence> findByParticipation_IdParticipationAndJour(
             Integer participationId, LocalDate jour);
 
+    void deleteByParticipation_Session_IdSession(Integer sessionId);
+
     // All presence for a session (used for export)
     @Query("""
         SELECT p FROM Presence p

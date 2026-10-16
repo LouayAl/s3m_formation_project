@@ -5,6 +5,7 @@ import com.s3m.formation.api.dto.SessionFormationResponseDto;
 import com.s3m.formation.api.dto.UpdateSessionRequest;
 import com.s3m.formation.domain.coutFormation.CoutFormation;
 import com.s3m.formation.domain.coutFormation.CoutFormationRepository;
+import com.s3m.formation.domain.EvaluationAFroid.EvaluationAFroidRepository;
 import com.s3m.formation.domain.employe.EmployeRepository;
 import com.s3m.formation.domain.employe.Employe;
 import com.s3m.formation.domain.entreprise.Entreprise;
@@ -12,10 +13,16 @@ import com.s3m.formation.domain.entreprise.EntrepriseRepository;
 import com.s3m.formation.domain.formateur.FormateurRepository;
 import com.s3m.formation.domain.formation.Formation;
 import com.s3m.formation.domain.formation.FormationRepository;
+import com.s3m.formation.domain.evaluation.EvaluationRepository;
+import com.s3m.formation.domain.evaluationAChaud.EvaluationAChaudRepository;
 import com.s3m.formation.domain.participation.Participation;
 import com.s3m.formation.domain.participation.ParticipationRepository;
+import com.s3m.formation.domain.presence.PresenceRepository;
+import com.s3m.formation.domain.quiz.QuizReponseRepository;
+import com.s3m.formation.domain.sessionCritere.SessionCritereRepository;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAudit;
 import com.s3m.formation.domain.sessionFormation.sessionFormationAudit.SessionFormationAuditRepository;
+import com.s3m.formation.domain.sessionProgramme.SessionDailyProgramRepository;
 import com.s3m.formation.security.util.AuthDetails;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +62,13 @@ public class SessionFormationService {
     private final ParticipationRepository participationRepository;
     private final EmployeRepository employeRepository;
     private final CoutFormationRepository coutFormationRepository;
+    private final EvaluationRepository evaluationRepository;
+    private final EvaluationAChaudRepository evaluationAChaudRepository;
+    private final EvaluationAFroidRepository evaluationAFroidRepository;
+    private final PresenceRepository presenceRepository;
+    private final QuizReponseRepository quizReponseRepository;
+    private final SessionCritereRepository sessionCritereRepository;
+    private final SessionDailyProgramRepository sessionDailyProgramRepository;
     private final EmailNotificationService emailNotificationService;
 
 
@@ -89,8 +103,10 @@ public class SessionFormationService {
             int size,
             String sortBy,
             String sortDir,
-            String filterField,   // ← add
-            String filterValue    // ← add
+            String filterField,
+            String filterValue,
+            LocalDate startDate,
+            LocalDate endDate
     ) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = currentUserCanViewAllEntreprises()
@@ -130,7 +146,8 @@ public class SessionFormationService {
         return repository.findPaginated(
                 entrepriseId, currentUserIsDepartmentChef() ? requireCurrentDepartment() : null,
                 search, yearsFilter, statutsFilter,
-                effectiveFacture, currentUserIsFinance(), colField, colFilter, pageable
+                effectiveFacture, currentUserIsFinance(), colField, colFilter,
+                startDate, endDate, pageable
         ).map(this::toDto);
     }
 
@@ -339,9 +356,23 @@ public class SessionFormationService {
         SessionFormation session = repository.findById(sessionId)
                 .orElseThrow(() -> new EntityNotFoundException("Session not found"));
 
-        // Delete dependent CoutFormation rows first to avoid FK violation
-        List<CoutFormation> couts = coutFormationRepository.findBySession_IdSession(sessionId);
-        coutFormationRepository.deleteAll(couts);
+        // Remove all session-owned records first. This runs in the service transaction,
+        // so any failure rolls the full delete back instead of leaving partial data.
+        evaluationRepository.deleteAll(evaluationRepository.findBySession_IdSessionOrderByJourAsc(sessionId));
+        evaluationAChaudRepository.deleteAll(evaluationAChaudRepository.findBySession_IdSession(sessionId));
+        evaluationAFroidRepository.deleteByParticipation_Session_IdSession(sessionId);
+        presenceRepository.deleteByParticipation_Session_IdSession(sessionId);
+        participationRepository.deleteAll(participationRepository.findBySession_IdSession(sessionId));
+        quizReponseRepository.deleteAll(quizReponseRepository.findBySession_IdSession(sessionId));
+        sessionCritereRepository.deleteBySession_IdSession(sessionId);
+        sessionDailyProgramRepository.deleteBySession_IdSession(sessionId);
+        auditRepository.deleteAll(auditRepository.findBySession_IdSessionOrderByDateModificationDesc(sessionId));
+        coutFormationRepository.deleteAll(coutFormationRepository.findBySession_IdSession(sessionId));
+
+        // session_jour is an element collection owned by the session.
+        if (session.getJoursSession() != null) {
+            session.getJoursSession().clear();
+        }
 
         repository.delete(session);
     }

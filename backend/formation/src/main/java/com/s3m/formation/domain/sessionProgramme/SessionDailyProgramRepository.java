@@ -6,5 +6,8 @@ import java.util.Optional;
 
 public interface SessionDailyProgramRepository extends JpaRepository<SessionDailyProgram, Integer> {
 
-    Optional<SessionDailyProgram> findBySession_IdSessionAndJour(Integer idSession, Integer jour);
+    void deleteBySession_IdSession(Integer sessionId);
+
+    Optional<SessionDailyProgram> findBySession_IdSessionAndJourAndEmployeIsNull(
+            Integer idSession, Integer jour);
 }

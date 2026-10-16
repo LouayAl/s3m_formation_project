@@ -59,7 +59,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (mois)
                 mois, formation AS top_module, total_heures
             FROM monthly_totals
-            ORDER BY mois, total_heures DESC
+            ORDER BY mois, total_heures DESC NULLS LAST
         )
         SELECT
             m.mois,
@@ -95,7 +95,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (mois)
                 mois, formation AS top_module, total_heures
             FROM monthly_totals
-            ORDER BY mois, total_heures DESC
+            ORDER BY mois, total_heures DESC NULLS LAST
         )
         SELECT
             m.mois,
@@ -133,7 +133,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (mois_num)
                 mois, mois_num, formation AS top_module, total_heures
             FROM monthly_totals
-            ORDER BY mois_num, total_heures DESC
+            ORDER BY mois_num, total_heures DESC NULLS LAST
         )
         SELECT
             m.mois,
@@ -177,7 +177,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (jour)
                 jour, formation AS top_module, total_heures
             FROM daily_totals
-            ORDER BY jour, total_heures DESC
+            ORDER BY jour, total_heures DESC NULLS LAST
         )
         SELECT
             d.jour,
@@ -220,7 +220,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (annee)
                 annee, formation AS top_module, total_heures
             FROM yearly_totals
-            ORDER BY annee, total_heures DESC
+            ORDER BY annee, total_heures DESC NULLS LAST
         )
         SELECT
             y.annee,
@@ -263,7 +263,7 @@ public interface ClientFormationKpiRepository extends JpaRepository<SessionForma
             SELECT DISTINCT ON (annee)
                 annee, formation AS top_module, total_heures
             FROM yearly_totals
-            ORDER BY annee, total_heures DESC
+            ORDER BY annee, total_heures DESC NULLS LAST
         )
         SELECT
             y.annee,

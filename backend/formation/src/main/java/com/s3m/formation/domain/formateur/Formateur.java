@@ -25,7 +25,7 @@ public class Formateur {
     private String telephone;
     private Boolean actif;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(
             name = "id_fournisseur",
             referencedColumnName = "id_entreprise"

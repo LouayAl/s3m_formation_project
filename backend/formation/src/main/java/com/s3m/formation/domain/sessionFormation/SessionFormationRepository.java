@@ -158,39 +158,41 @@ public interface SessionFormationRepository
 // throwing "function lower(bytea) does not exist". The CAST removes the
 // ambiguity so Postgres always treats these as text.
     @Query("""
-SELECT s
-FROM SessionFormation s
-JOIN s.formation f
-LEFT JOIN s.formateur fo
-LEFT JOIN s.entreprise e
-LEFT JOIN s.fournisseur fu
-WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
-  AND s.createdInEm = false
-  AND (:departementId IS NULL OR EXISTS (
-        SELECT pScope.id FROM Participation pScope
-        WHERE pScope.session = s AND pScope.employe.departement.id = :departementId
-      ))
-  AND (:search IS NULL OR :search = ''
-       OR LOWER(f.module) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
-       OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
-  AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
-  AND (:statuts IS NULL OR s.statut IN :statuts)
-  AND (:facture IS NULL OR s.sessionFacturee = :facture)
-  AND (:excludeEmFormations = false OR f.sousFamille IS NULL OR UPPER(TRIM(f.sousFamille)) <> 'EM')
-  AND (
-        :colField IS NULL
-     OR :colFilter IS NULL
-     OR (:colField = 'formation'           AND LOWER(f.module)                        LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'referenceSession'    AND LOWER(s.referenceSession)              LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'entrepriseNom'       AND LOWER(e.nomEntreprise)                 LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'fournisseurNom'      AND LOWER(fu.nomEntreprise)                LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'formateurNomComplet' AND LOWER(CONCAT(fo.nom, ' ', fo.prenom)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'lieu'                AND LOWER(s.lieu)                          LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'statut' AND LOWER(CAST(s.statut AS text)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
-     OR (:colField = 'dateDebut' AND CAST(s.dateDebut AS text)  LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
-     OR (:colField = 'dateFin'   AND CAST(s.dateFin AS text)    LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
-  )
-""")
+        SELECT s
+        FROM SessionFormation s
+        JOIN s.formation f
+        LEFT JOIN s.formateur fo
+        LEFT JOIN s.entreprise e
+        LEFT JOIN s.fournisseur fu
+        WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
+          AND s.createdInEm = false
+          AND (:departementId IS NULL OR EXISTS (
+                SELECT pScope.id FROM Participation pScope
+                WHERE pScope.session = s AND pScope.employe.departement.id = :departementId
+              ))
+          AND (:search IS NULL OR :search = ''
+               OR LOWER(f.module) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+               OR LOWER(s.referenceSession) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
+          AND (:years IS NULL OR EXTRACT(YEAR FROM s.dateDebut) IN :years)
+          AND (CAST(:startDate AS date) IS NULL OR s.dateDebut >= :startDate)
+          AND (CAST(:endDate AS date) IS NULL OR s.dateDebut <= :endDate)
+          AND (:statuts IS NULL OR s.statut IN :statuts)
+          AND (:facture IS NULL OR s.sessionFacturee = :facture)
+          AND (:excludeEmFormations = false OR f.sousFamille IS NULL OR UPPER(TRIM(f.sousFamille)) <> 'EM')
+          AND (
+                :colField IS NULL
+             OR :colFilter IS NULL
+             OR (:colField = 'formation'           AND LOWER(f.module)                        LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'referenceSession'    AND LOWER(s.referenceSession)              LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'entrepriseNom'       AND LOWER(e.nomEntreprise)                 LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'fournisseurNom'      AND LOWER(fu.nomEntreprise)                LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'formateurNomComplet' AND LOWER(CONCAT(fo.nom, ' ', fo.prenom)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'lieu'                AND LOWER(s.lieu)                          LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'statut' AND LOWER(CAST(s.statut AS text)) LIKE LOWER(CONCAT('%', CAST(:colFilter AS string), '%')))
+             OR (:colField = 'dateDebut' AND CAST(s.dateDebut AS text)  LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
+             OR (:colField = 'dateFin'   AND CAST(s.dateFin AS text)    LIKE CONCAT('%', CAST(:colFilter AS string), '%'))
+          )
+    """)
     Page<SessionFormation> findPaginated(
             @Param("entrepriseId") Integer entrepriseId,
             @Param("departementId") Integer departementId,
@@ -201,6 +203,8 @@ WHERE (:entrepriseId IS NULL OR e.idEntreprise = :entrepriseId)
             @Param("excludeEmFormations") boolean excludeEmFormations,
             @Param("colField")     String colField,
             @Param("colFilter")    String colFilter,
+            @Param("startDate")    LocalDate startDate,
+            @Param("endDate")      LocalDate endDate,
             Pageable pageable
     );
 

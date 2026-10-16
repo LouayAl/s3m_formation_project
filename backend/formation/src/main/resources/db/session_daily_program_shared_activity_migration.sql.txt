@@ -1,0 +1,6 @@
+-- Keep exactly one participant-independent daily program per session and day.
+-- Older participant-specific programs remain intact; new shared programs use
+-- id_employe = NULL and are protected from duplicate concurrent inserts.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_session_daily_program_shared_session_day
+    ON session_daily_program (id_session, jour)
+    WHERE id_employe IS NULL;

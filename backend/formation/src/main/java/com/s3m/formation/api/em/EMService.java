@@ -435,7 +435,7 @@ public class EMService {
     public DailyProgramDto getDailyProgram(Integer sessionId, Integer jour) {
         getSessionForCurrentUser(sessionId);
 
-        return dailyProgramRepo.findBySession_IdSessionAndJour(sessionId, jour)
+        return dailyProgramRepo.findBySession_IdSessionAndJourAndEmployeIsNull(sessionId, jour)
                 .map(this::toDailyProgramDto)
                 .orElseGet(() -> new DailyProgramDto(
                         null,
@@ -455,7 +455,7 @@ public class EMService {
                         HttpStatus.NOT_FOUND, "Session non trouvée"));
 
         SessionDailyProgram program = dailyProgramRepo
-                .findBySession_IdSessionAndJour(sessionId, jour)
+                .findBySession_IdSessionAndJourAndEmployeIsNull(sessionId, jour)
                 .orElseGet(() -> SessionDailyProgram.builder()
                         .session(session)
                         .jour(jour)

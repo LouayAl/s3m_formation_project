@@ -1,6 +1,7 @@
 package com.s3m.formation.domain.entreprise;
 
 import com.s3m.formation.api.dto.EntrepriseResponseDto;
+import com.s3m.formation.security.util.SecurityContextUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,8 +24,15 @@ public class EntrepriseController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
     public EntrepriseResponseDto getEntrepriseById(@PathVariable Integer id) {
+        boolean isChef = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getAuthorities().stream()
+                .anyMatch(authority -> "CHEF_DEPARTEMENT".equals(authority.getAuthority()));
+        if (isChef && !java.util.Objects.equals(id, SecurityContextUtils.getEntrepriseId())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Accès refusé");
+        }
         return entrepriseService.getEntrepriseById(id);
     }
 

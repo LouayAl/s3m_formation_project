@@ -1,0 +1,3 @@
+-- Run once against the application database before deploying the backend.
+ALTER TABLE besoin_formation
+    ADD COLUMN IF NOT EXISTS nouvelle_formation BOOLEAN NOT NULL DEFAULT FALSE;
