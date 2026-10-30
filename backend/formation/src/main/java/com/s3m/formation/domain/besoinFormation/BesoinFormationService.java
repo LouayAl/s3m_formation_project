@@ -32,11 +32,11 @@ public class BesoinFormationService {
     private final UserRepository userRepository;
 
     // =========================
-    // GET ALL (SCOPED, ADMIN CAN FILTER)
+    // GET ALL (ADMINS AND MANAGERS CAN FILTER)
     // =========================
     public List<BesoinFormationResponseDto> getVisibleBesoinsForCurrentUser(Integer requestedEntrepriseId) {
-        if (currentUserIsAdminOnly()) {
-            // ADMIN: requestedEntrepriseId == null -> every besoin in the DB
+        if (currentUserCanManageBesoins()) {
+            // ADMIN/MANAGER: requestedEntrepriseId == null -> every besoin in the DB
             List<BesoinFormation> besoins = (requestedEntrepriseId == null)
                     ? besoinFormationRepository.findAll()
                     : besoinFormationRepository.findByEntreprise_IdEntreprise(requestedEntrepriseId);
@@ -77,13 +77,13 @@ public class BesoinFormationService {
     }
 
     // =========================
-    // GET BY ID (SECURITY CHECK — ADMIN BYPASSES)
+    // GET BY ID (SECURITY CHECK — ADMIN/MANAGER BYPASS)
     // =========================
     public BesoinFormationResponseDto getBesoinById(Integer id) {
         BesoinFormation besoin = besoinFormationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Besoin de formation non trouvé"));
 
-        if (!currentUserIsAdminOnly()) {
+        if (!currentUserCanManageBesoins()) {
             Integer entrepriseId = SecurityContextUtils.getEntrepriseId();
             if (besoin.getEntreprise() == null || !besoin.getEntreprise().getIdEntreprise().equals(entrepriseId)) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé");
@@ -102,12 +102,11 @@ public class BesoinFormationService {
     }
 
     // =========================
-    // CREATE (ADMIN only — also enforced via @PreAuthorize on the controller)
+    // CREATE (ADMIN, MANAGER and department heads — also enforced via @PreAuthorize on the controller)
     // =========================
     public BesoinFormationResponseDto createBesoin(BesoinFormationRequest request) {
         boolean chef = currentUserIsDepartmentChef();
-        boolean manager = currentUserIsManager();
-        boolean departmentScopedCreator = chef || manager;
+        boolean departmentScopedCreator = chef;
         if (!departmentScopedCreator && request.idEntreprise() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Entreprise obligatoire");
         }
@@ -118,9 +117,6 @@ public class BesoinFormationService {
         Integer entrepriseId = departmentScopedCreator
                 ? SecurityContextUtils.getEntrepriseId()
                 : request.idEntreprise();
-        if (manager && !java.util.Objects.equals(entrepriseId, request.idEntreprise())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous ne pouvez créer un besoin que pour votre entreprise.");
-        }
         if (entrepriseId == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Entreprise obligatoire");
         Entreprise entreprise = entrepriseRepository.findById(entrepriseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Entreprise non trouvée"));
@@ -166,8 +162,8 @@ public class BesoinFormationService {
     public BesoinFormationResponseDto decideBesoin(Integer id, BesoinDecisionRequest decision) {
         BesoinFormation besoin = besoinFormationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Besoin de formation non trouvé"));
-        if (!currentUserIsAdminOnly()) {
-            ensureManagerCanDecide(besoin);
+        if (!currentUserCanManageBesoins()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acc?s refus?.");
         }
         if (!"PENDING".equalsIgnoreCase(besoin.getStatus() == null ? "" : besoin.getStatus().trim())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Seules les demandes en attente peuvent être traitées.");
@@ -187,27 +183,6 @@ public class BesoinFormationService {
         besoin.setStatus(status);
         besoin.setRejectionReason("REJECTED".equals(status) ? reason : null);
         return toDto(besoinFormationRepository.save(besoin));
-    }
-
-    private void ensureManagerCanDecide(BesoinFormation besoin) {
-        User requester = besoin.getRequestedBy();
-        Integer managerEntrepriseId = SecurityContextUtils.getEntrepriseId();
-        Integer managerDepartementId = SecurityContextUtils.getDepartementId();
-        Integer requestEntrepriseId = besoin.getEntreprise() != null
-                ? besoin.getEntreprise().getIdEntreprise() : null;
-        Integer requestDepartementId = besoin.getDepartement() != null
-                ? besoin.getDepartement().getId() : null;
-
-        if (!currentUserIsManager()
-                || requester == null
-                || !"CHEF_DEPARTEMENT".equals(requester.getRole())
-                || managerEntrepriseId == null
-                || managerDepartementId == null
-                || !managerEntrepriseId.equals(requestEntrepriseId)
-                || !managerDepartementId.equals(requestDepartementId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Un manager peut traiter uniquement les demandes des chefs de son département.");
-        }
     }
 
     public BesoinFormationResponseDto submitDraft(Integer id) {
@@ -247,13 +222,12 @@ public class BesoinFormationService {
         BesoinFormation existing = besoinFormationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Besoin de formation non trouvé"));
 
-        boolean admin = currentUserIsAdminOnly();
+        boolean admin = currentUserCanManageBesoins();
         if (admin) {
-            // Admins can edit any besoin.
+            // Admins and managers can edit any besoin.
         } else if (currentUserIsDepartmentChef()) {
             ensureRequesterOwnsDraft(existing);
-        } else if (currentUserIsManager()) {
-            ensureManagerCanManageSubmittedChefRequest(existing);
+
         } else if (existing.getRequestedBy() != null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Seul l'administrateur peut modifier cette demande.");
@@ -285,14 +259,6 @@ public class BesoinFormationService {
         return toDto(besoinFormationRepository.save(existing));
     }
 
-    private void ensureManagerCanManageSubmittedChefRequest(BesoinFormation besoin) {
-        if (!"PENDING".equalsIgnoreCase(besoin.getStatus() == null ? "" : besoin.getStatus().trim())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Le manager peut modifier uniquement une demande envoyée et en attente.");
-        }
-        ensureManagerCanDecide(besoin);
-    }
-
     private void ensureRequesterOwnsDraft(BesoinFormation besoin) {
         if (!currentUserCanSubmitRequests()
                 || besoin.getRequestedBy() == null
@@ -307,29 +273,19 @@ public class BesoinFormationService {
         User requester = besoin.getRequestedBy();
         if (requester == null) return false;
 
-        if (currentUserIsManager()) {
-            if ("MANAGER".equals(requester.getRole())) {
-                return !"BROUILLON".equals(besoin.getStatus());
-            }
-            return "CHEF_DEPARTEMENT".equals(requester.getRole())
-                    && !"BROUILLON".equals(besoin.getStatus());
-        }
-
         String currentEmail = SecurityContextUtils.getEmail();
         if (currentEmail != null && currentEmail.equalsIgnoreCase(requester.getEmail())) return true;
         return false;
     }
 
     // =========================
-    // DELETE (ADMIN only)
+    // DELETE (ADMIN and MANAGER)
     // =========================
     public void deleteBesoin(Integer id) {
         BesoinFormation besoin = besoinFormationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Besoin de formation non trouvé"));
 
-        if (currentUserIsManager()) {
-            ensureManagerCanManageSubmittedChefRequest(besoin);
-        } else if (!currentUserIsAdminOnly() && !currentUserIsAdminFinance()) {
+        if (!currentUserCanManageBesoins() && !currentUserIsAdminFinance()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé.");
         }
 
@@ -373,12 +329,12 @@ public class BesoinFormationService {
     // =========================
     // ROLE HELPER
     // =========================
-    private boolean currentUserIsAdminOnly() {
+    private boolean currentUserCanManageBesoins() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
 
         for (GrantedAuthority authority : auth.getAuthorities()) {
-            if ("ADMIN".equals(authority.getAuthority())) {
+            if ("ADMIN".equals(authority.getAuthority()) || "MANAGER".equals(authority.getAuthority())) {
                 return true;
             }
         }
@@ -389,12 +345,6 @@ public class BesoinFormationService {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> "CHEF_DEPARTEMENT".equals(a.getAuthority()));
-    }
-
-    private boolean currentUserIsManager() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getAuthorities().stream()
-                .anyMatch(authority -> "MANAGER".equals(authority.getAuthority()));
     }
 
     private boolean currentUserIsAdminFinance() {
@@ -408,7 +358,7 @@ public class BesoinFormationService {
     }
 
     private boolean currentUserHasDepartmentScope() {
-        return currentUserIsDepartmentChef() || currentUserIsManager();
+        return currentUserIsDepartmentChef();
     }
 
     private Integer requireCurrentDepartment() {

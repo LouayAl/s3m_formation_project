@@ -20,7 +20,7 @@ public class BesoinFormationController {
 
     // =========================
     // GET ALL — everyone can view (scoped to their own entreprise);
-    // entrepriseId param only has effect for ADMIN.
+    // entrepriseId param has effect for ADMIN and MANAGER.
     // =========================
     @GetMapping
     @PreAuthorize("hasAnyAuthority('ADMIN','MANAGER','CHEF_DEPARTEMENT','EQUIPMENT_MANAGER','TRAINER','VISITOR','ADMIN_FINANCE')")
@@ -37,7 +37,7 @@ public class BesoinFormationController {
     }
 
     // =========================
-    // Admins and department scoped requesters may create training needs.
+    // Admins, managers and department scoped requesters may create training needs.
     // =========================
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

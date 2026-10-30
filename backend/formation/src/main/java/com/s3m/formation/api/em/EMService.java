@@ -96,18 +96,21 @@ public class EMService {
 
     // ─── Evaluations for a session ────────────────────────────────────────────
     public List<EvaluationDto> getEvaluationsForSession(Integer sessionId) {
+        assertTrainerCanAccess(sessionId);
         return evalRepo.findBySession_IdSessionOrderByJourAsc(sessionId)
                 .stream().map(this::toDto).toList();
     }
 
     // ─── Evaluations for a participant in a session ───────────────────────────
     public List<EvaluationDto> getEvaluationsForParticipant(Integer sessionId, Integer employeId) {
+        assertTrainerCanAccess(sessionId);
         return evalRepo.findBySession_IdSessionAndEmploye_IdEmployeOrderByJourAsc(sessionId, employeId)
                 .stream().map(this::toDto).toList();
     }
 
     // ─── Per-participant stats for a session ──────────────────────────────────
     public List<Map<String, Object>> getParticipantStats(Integer sessionId) {
+        assertTrainerCanAccess(sessionId);
         return evalRepo.getParticipantStatsForSession(sessionId).stream().map(row -> {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("idEmploye",    row[0]);
@@ -195,6 +198,7 @@ public class EMService {
 
     // ─── Get criteria for a session day ──────────────────────────────────────────
     public List<SessionCritereDto> getCriteres(Integer sessionId, Integer jour) {
+        assertTrainerCanAccess(sessionId);
         return critereRepo
                 .findBySession_IdSessionAndJourOrderByCritereIndexAsc(sessionId, jour)
                 .stream()
@@ -284,6 +288,10 @@ public class EMService {
 
     // ─── Sessions filtered by current user's entreprise ───────────────────────
     public List<SessionFormationResponseDto> getSessionsForCurrentUser() {
+        if (currentUserIsTrainer()) {
+            return getSessionsForTrainer();   // already filters by formateur + createdInEm
+        }
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
@@ -304,13 +312,17 @@ public class EMService {
         Integer entrepriseId = auth.getDetails() instanceof AuthDetails d ? d.getEntrepriseId() : null;
 
         SessionFormation session = sessionRepo.findById(sessionId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Session non trouvée"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée"));
 
-        if (!session.isCreatedInEm() || session.getEntreprise() == null ||
-                !session.getEntreprise().getIdEntreprise().equals(entrepriseId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Accès refusé à cette session");
+        if (!session.isCreatedInEm()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé à cette session");
+        }
+
+        if (currentUserIsTrainer()) {
+            assertTrainerCanAccess(session);   // for trainers, assignment decides
+        } else if (session.getEntreprise() == null
+                || !session.getEntreprise().getIdEntreprise().equals(entrepriseId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé à cette session");
         }
 
         return toSessionDto(session);
@@ -597,5 +609,32 @@ public class EMService {
                         && s.getEntreprise() != null
                         && s.getFormateur().getEntreprise().getIdEntreprise().equals(s.getEntreprise().getIdEntreprise())
         );
+    }
+
+    private boolean currentUserIsTrainer() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "TRAINER".equals(a.getAuthority()));
+    }
+
+    private Formateur requireCurrentFormateur() {
+        return getCurrentFormateur().orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.FORBIDDEN, "Aucun formateur trouvé pour ce compte. Contactez l'administrateur."));
+    }
+
+    /** TRAINER accounts may only touch sessions assigned to their formateur record. */
+    private void assertTrainerCanAccess(SessionFormation session) {
+        if (!currentUserIsTrainer()) return;
+        Formateur formateur = requireCurrentFormateur();
+        if (session.getFormateur() == null
+                || !session.getFormateur().getIdFormateur().equals(formateur.getIdFormateur())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé à cette session");
+        }
+    }
+
+    private void assertTrainerCanAccess(Integer sessionId) {
+        if (!currentUserIsTrainer()) return;
+        assertTrainerCanAccess(sessionRepo.findById(sessionId).orElseThrow(
+                () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session non trouvée")));
     }
 }
